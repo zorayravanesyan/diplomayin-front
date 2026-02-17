@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import IMG from '../data/images';
 
 const navItems = [
@@ -12,6 +13,14 @@ const navItems = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+    setMenuOpen(false);
+  };
 
   return (
     <header className="header">
@@ -43,20 +52,41 @@ export default function Header() {
             </Link>
           ))}
           <div className="header__auth">
-            <Link
-              to="/login"
-              className="btn btn--outline header__auth-btn"
-              onClick={() => setMenuOpen(false)}
-            >
-              Մուտք
-            </Link>
-            <Link
-              to="/registration"
-              className="btn btn--primary header__auth-btn"
-              onClick={() => setMenuOpen(false)}
-            >
-              Գրանցում
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="btn btn--outline header__auth-btn"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Պրոֆիլ
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn--primary header__auth-btn"
+                  onClick={handleLogout}
+                >
+                  Ելք
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="btn btn--outline header__auth-btn"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Մուտք
+                </Link>
+                <Link
+                  to="/registration"
+                  className="btn btn--primary header__auth-btn"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Գրանցում
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       </div>
