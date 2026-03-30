@@ -1295,6 +1295,25 @@ img {
   gap: 1rem;
 }
 
+.dashboard__card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.dashboard__tab-toolbar {
+  margin-bottom: 1rem;
+}
+
+.dashboard__view-btn--edit {
+  color: var(--color-text-muted);
+}
+
+.dashboard__view-btn--edit:hover {
+  color: var(--color-primary);
+}
+
 .dashboard__card-body {
   flex: 1;
   min-width: 0;

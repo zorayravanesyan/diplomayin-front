@@ -43,3 +43,11 @@ export async function updateUserById(userId, body) {
   });
   return data.user;
 }
+
+export async function createTeacher(body) {
+  const data = await apiRequest('/users/teachers', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return data.user;
+}

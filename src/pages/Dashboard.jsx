@@ -8,6 +8,7 @@ import {
   getUserWithRelations,
   getPublicTeachers,
   updateUserById,
+  createTeacher,
 } from '../services/userService';
 
 function genderLabel(g) {
@@ -40,7 +41,24 @@ function ViewIcon() {
   );
 }
 
-function PersonList({ people, onViewPerson }) {
+function EditIcon() {
+  return (
+    <svg
+      className="dashboard__view-icon"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        fill="currentColor"
+        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+      />
+    </svg>
+  );
+}
+
+function PersonList({ people, onViewPerson, onEditPerson }) {
   if (people.length === 0) {
     return <p className="dashboard__empty">Դատարկ ցանկ։</p>;
   }
@@ -58,16 +76,31 @@ function PersonList({ people, onViewPerson }) {
                 <span>{genderLabel(p.gender)}</span>
               </div>
             </div>
-            {onViewPerson && (
-              <button
-                type="button"
-                className="dashboard__view-btn"
-                onClick={() => onViewPerson(p)}
-                aria-label={`Դիտել ${p.first_name} ${p.last_name}`}
-                title="Դիտել"
-              >
-                <ViewIcon />
-              </button>
+            {(onViewPerson || onEditPerson) && (
+              <div className="dashboard__card-actions">
+                {onViewPerson && (
+                  <button
+                    type="button"
+                    className="dashboard__view-btn"
+                    onClick={() => onViewPerson(p)}
+                    aria-label={`Դիտել ${p.first_name} ${p.last_name}`}
+                    title="Դիտել"
+                  >
+                    <ViewIcon />
+                  </button>
+                )}
+                {onEditPerson && (
+                  <button
+                    type="button"
+                    className="dashboard__view-btn dashboard__view-btn--edit"
+                    onClick={() => onEditPerson(p)}
+                    aria-label={`Խմբագրել ${p.first_name} ${p.last_name}`}
+                    title="Խմբագրել"
+                  >
+                    <EditIcon />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </li>
@@ -76,11 +109,21 @@ function PersonList({ people, onViewPerson }) {
   );
 }
 
-function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, onUserRefresh }) {
+function UserDetailModal({
+  user: u,
+  loading,
+  error,
+  onClose,
+  isAdmin,
+  mode,
+  onSaved,
+  onUserRefresh,
+}) {
   const [allTeachers, setAllTeachers] = useState([]);
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const readOnly = mode === 'view';
 
   useEffect(() => {
     const onKey = (e) => {
@@ -91,7 +134,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
   }, [onClose]);
 
   useEffect(() => {
-    if (!u || !canEdit) {
+    if (!u || !isAdmin) {
       setEditForm(null);
       return;
     }
@@ -112,10 +155,10 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
           : [],
     });
     setSaveError('');
-  }, [u, canEdit]);
+  }, [u, isAdmin]);
 
   useEffect(() => {
-    if (!canEdit || u?.role !== 'STUDENT') {
+    if (!isAdmin || u?.role !== 'STUDENT') {
       setAllTeachers([]);
       return;
     }
@@ -130,15 +173,17 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
     return () => {
       cancelled = true;
     };
-  }, [canEdit, u?.role, u?.id]);
+  }, [isAdmin, u?.role, u?.id]);
 
   const handleEditChange = (e) => {
+    if (readOnly) return;
     const { name, value } = e.target;
     setEditForm((prev) => (prev ? { ...prev, [name]: value } : prev));
     setSaveError('');
   };
 
   const toggleTeacher = (id) => {
+    if (readOnly) return;
     setEditForm((prev) => {
       if (!prev) return prev;
       const ids = prev.teacherIds.includes(id)
@@ -151,7 +196,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!u || !editForm) return;
+    if (readOnly || !u || !editForm) return;
     if (u.role === 'STUDENT' && editForm.teacherIds.length < 1) {
       setSaveError('Ընտրեք առնվազն մեկ ուսուցիչ');
       return;
@@ -201,7 +246,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
       role="presentation"
     >
       <div
-        className={`dashboard__modal ${canEdit ? 'dashboard__modal--wide' : ''}`}
+        className={`dashboard__modal ${isAdmin ? 'dashboard__modal--wide' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-detail-title"
@@ -219,7 +264,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
         {error && !loading && (
           <div className="auth-page__error dashboard__modal-error">{error}</div>
         )}
-        {u && !loading && !canEdit && (
+        {u && !loading && !isAdmin && (
           <>
             <h2 id="user-detail-title" className="dashboard__modal-title">
               {u.first_name} {u.last_name}
@@ -269,12 +314,18 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
           </>
         )}
 
-        {u && !loading && canEdit && editForm && (
-          <form className="dashboard__edit-form" onSubmit={handleSave}>
+        {u && !loading && isAdmin && editForm && (
+          <form
+            className="dashboard__edit-form"
+            onSubmit={readOnly ? (e) => e.preventDefault() : handleSave}
+          >
             <h2 id="user-detail-title" className="dashboard__modal-title">
-              Խմբագրել · {u.first_name} {u.last_name}
+              {readOnly ? 'Դիտել' : 'Խմբագրել'} · {u.first_name} {u.last_name}
             </h2>
-            <p className="dashboard__modal-sub">{roleLabel(u.role)}</p>
+            <p className="dashboard__modal-sub">
+              {roleLabel(u.role)}
+              {readOnly ? ' · միայն ընթերցում' : ''}
+            </p>
 
             {saveError && (
               <div className="auth-page__error dashboard__modal-error">{saveError}</div>
@@ -288,6 +339,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.first_name}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                   required
                 />
               </label>
@@ -298,6 +350,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.last_name}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                   required
                 />
               </label>
@@ -309,6 +362,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.email}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                   required
                 />
               </label>
@@ -319,6 +373,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.username}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                   required
                 />
               </label>
@@ -329,24 +384,27 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.gender}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                 >
                   <option value="UNKNOWN">Չնշված</option>
                   <option value="MALE">Արական</option>
                   <option value="FEMALE">Իգական</option>
                 </select>
               </label>
-              <label className="contact-form__label">
-                <span>Նոր գաղտնաբառ (ըստ ցանկության)</span>
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={editForm.password}
-                  onChange={handleEditChange}
-                  className="contact-form__input"
-                  placeholder="Թողնել դատարկ"
-                />
-              </label>
+              {!readOnly && (
+                <label className="contact-form__label">
+                  <span>Նոր գաղտնաբառ (ըստ ցանկության)</span>
+                  <input
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={editForm.password}
+                    onChange={handleEditChange}
+                    className="contact-form__input"
+                    placeholder="Թողնել դատարկ"
+                  />
+                </label>
+              )}
               <label className="contact-form__label">
                 <span>Քաշ (կգ)</span>
                 <input
@@ -356,6 +414,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.weight_kg}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                 />
               </label>
               <label className="contact-form__label">
@@ -366,6 +425,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.height_sm}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                 />
               </label>
               <label className="contact-form__label">
@@ -377,6 +437,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                   value={editForm.experience_months}
                   onChange={handleEditChange}
                   className="contact-form__input"
+                  disabled={readOnly}
                 />
               </label>
             </div>
@@ -391,6 +452,7 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
                         type="checkbox"
                         checked={editForm.teacherIds.includes(t.id)}
                         onChange={() => toggleTeacher(t.id)}
+                        disabled={readOnly}
                       />
                       <span>
                         {t.last_name} {t.first_name}{' '}
@@ -402,16 +464,235 @@ function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, o
               </div>
             )}
 
-            <div className="dashboard__modal-actions">
-              <button type="submit" className="btn btn--primary" disabled={saving}>
-                {saving ? 'Պահպանվում է...' : 'Պահպանել'}
-              </button>
-              <button type="button" className="btn btn--outline" onClick={onClose}>
-                Չեղարկել
-              </button>
-            </div>
+            {u.role === 'TICHER' && (
+              <div className="dashboard__modal-section">
+                <h3 className="dashboard__modal-section-title">Աշակերտներ</h3>
+                {u.students?.length ? (
+                  <ul className="dashboard__modal-list">
+                    {u.students.map((s) => (
+                      <li key={s.id}>
+                        {s.first_name} {s.last_name} (@{s.username})
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="dashboard__empty">Աշակերտ չկա։</p>
+                )}
+              </div>
+            )}
+
+            {!readOnly && (
+              <div className="dashboard__modal-actions">
+                <button type="submit" className="btn btn--primary" disabled={saving}>
+                  {saving ? 'Պահպանվում է...' : 'Պահպանել'}
+                </button>
+                <button type="button" className="btn btn--outline" onClick={onClose}>
+                  Չեղարկել
+                </button>
+              </div>
+            )}
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CreateTeacherModal({ students, onClose, onCreated }) {
+  const [form, setForm] = useState({
+    email: '',
+    username: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    gender: 'UNKNOWN',
+    studentIds: [],
+  });
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErr('');
+  };
+
+  const toggleStudent = (id) => {
+    setForm((prev) => {
+      const ids = prev.studentIds.includes(id)
+        ? prev.studentIds.filter((x) => x !== id)
+        : [...prev.studentIds, id];
+      return { ...prev, studentIds: ids };
+    });
+    setErr('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (form.studentIds.length < 1) {
+      setErr('Ընտրեք առնվազն մեկ աշակերտ');
+      return;
+    }
+    setSaving(true);
+    setErr('');
+    try {
+      await createTeacher({
+        email: form.email,
+        username: form.username,
+        password: form.password,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        gender: form.gender === 'UNKNOWN' ? undefined : form.gender,
+        student_ids: form.studentIds,
+      });
+      onCreated?.();
+      onClose();
+    } catch (e) {
+      setErr(e.message || 'Չհաջողվեց');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="dashboard__modal-backdrop"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="dashboard__modal dashboard__modal--wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-teacher-title"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="dashboard__modal-close"
+          onClick={onClose}
+          aria-label="Փակել"
+        >
+          ×
+        </button>
+        <h2 id="create-teacher-title" className="dashboard__modal-title">
+          Նոր ուսուցիչ
+        </h2>
+        {err && <div className="auth-page__error dashboard__modal-error">{err}</div>}
+        <form className="dashboard__edit-form" onSubmit={handleSubmit}>
+          <div className="dashboard__edit-grid">
+            <label className="contact-form__label">
+              <span>Էլ. փոստ</span>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                className="contact-form__input"
+                required
+              />
+            </label>
+            <label className="contact-form__label">
+              <span>Օգտանուն</span>
+              <input
+                name="username"
+                value={form.username}
+                onChange={handleChange}
+                className="contact-form__input"
+                required
+              />
+            </label>
+            <label className="contact-form__label">
+              <span>Գաղտնաբառ</span>
+              <input
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                className="contact-form__input"
+                required
+                minLength={6}
+              />
+            </label>
+            <label className="contact-form__label">
+              <span>Անուն</span>
+              <input
+                name="first_name"
+                value={form.first_name}
+                onChange={handleChange}
+                className="contact-form__input"
+                required
+              />
+            </label>
+            <label className="contact-form__label">
+              <span>Ազգանուն</span>
+              <input
+                name="last_name"
+                value={form.last_name}
+                onChange={handleChange}
+                className="contact-form__input"
+                required
+              />
+            </label>
+            <label className="contact-form__label">
+              <span>Սեռ</span>
+              <select
+                name="gender"
+                value={form.gender}
+                onChange={handleChange}
+                className="contact-form__input"
+              >
+                <option value="UNKNOWN">Չնշված</option>
+                <option value="MALE">Արական</option>
+                <option value="FEMALE">Իգական</option>
+              </select>
+            </label>
+          </div>
+          <div className="dashboard__modal-section">
+            <span className="auth-page__checkbox-group-title">
+              Աշակերտներ (պարտադիր՝ առնվազն մեկը)
+            </span>
+            {students.length === 0 ? (
+              <p className="dashboard__empty">Աշակերտ չկա։ Ստեղծեք աշակերտներ։</p>
+            ) : (
+              <div className="auth-page__checkbox-list">
+                {students.map((s) => (
+                  <label key={s.id} className="auth-page__checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={form.studentIds.includes(s.id)}
+                      onChange={() => toggleStudent(s.id)}
+                    />
+                    <span>
+                      {s.last_name} {s.first_name}{' '}
+                      <span className="auth-page__checkbox-meta">@{s.username}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="dashboard__modal-actions">
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={saving || students.length === 0}
+            >
+              {saving ? 'Ստեղծվում է...' : 'Ստեղծել'}
+            </button>
+            <button type="button" className="btn btn--outline" onClick={onClose}>
+              Չեղարկել
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -430,9 +711,11 @@ export default function Dashboard() {
   const [adminStudents, setAdminStudents] = useState([]);
 
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailMode, setDetailMode] = useState('view');
   const [detailUser, setDetailUser] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+  const [createTeacherOpen, setCreateTeacherOpen] = useState(false);
 
   const reloadAdminOverview = useCallback(async () => {
     if (!user || user.role !== 'ADMIN') return;
@@ -445,7 +728,8 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const openUserDetail = useCallback(async (p) => {
+  const openUserDetail = useCallback(async (p, mode = 'view') => {
+    setDetailMode(mode);
     setDetailOpen(true);
     setDetailUser(null);
     setDetailError('');
@@ -462,6 +746,7 @@ export default function Dashboard() {
 
   const closeDetail = useCallback(() => {
     setDetailOpen(false);
+    setDetailMode('view');
     setDetailUser(null);
     setDetailError('');
     setDetailLoading(false);
@@ -585,16 +870,28 @@ export default function Dashboard() {
                 id={adminTab === 'teachers' ? 'admin-panel-teachers' : 'admin-panel-students'}
                 aria-labelledby={adminTab === 'teachers' ? 'admin-tab-teachers' : 'admin-tab-students'}
               >
+                {adminTab === 'teachers' && (
+                  <div className="dashboard__tab-toolbar">
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      onClick={() => setCreateTeacherOpen(true)}
+                    >
+                      + Ուսուցիչ
+                    </button>
+                  </div>
+                )}
                 <PersonList
                   people={adminActivePeople}
-                  onViewPerson={openUserDetail}
+                  onViewPerson={(p) => openUserDetail(p, 'view')}
+                  onEditPerson={(p) => openUserDetail(p, 'edit')}
                 />
               </div>
             </>
           ) : people.length === 0 ? (
             <p className="dashboard__empty">Դատարկ ցանկ։</p>
           ) : (
-            <PersonList people={people} onViewPerson={openUserDetail} />
+            <PersonList people={people} onViewPerson={(p) => openUserDetail(p, 'view')} />
           )}
 
           <div className="dashboard__actions">
@@ -614,9 +911,18 @@ export default function Dashboard() {
           loading={detailLoading}
           error={detailError}
           onClose={closeDetail}
-          canEdit={isAdmin}
+          isAdmin={isAdmin}
+          mode={detailMode}
           onSaved={handleUserSaved}
           onUserRefresh={handleUserRefresh}
+        />
+      )}
+
+      {createTeacherOpen && isAdmin && (
+        <CreateTeacherModal
+          students={adminStudents}
+          onClose={() => setCreateTeacherOpen(false)}
+          onCreated={reloadAdminOverview}
         />
       )}
     </section>
