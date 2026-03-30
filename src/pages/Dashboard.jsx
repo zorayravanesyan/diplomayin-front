@@ -6,6 +6,8 @@ import {
   getMyStudents,
   getAdminOverview,
   getUserWithRelations,
+  getPublicTeachers,
+  updateUserById,
 } from '../services/userService';
 
 function genderLabel(g) {
@@ -74,7 +76,12 @@ function PersonList({ people, onViewPerson }) {
   );
 }
 
-function UserDetailModal({ user: u, loading, error, onClose }) {
+function UserDetailModal({ user: u, loading, error, onClose, canEdit, onSaved, onUserRefresh }) {
+  const [allTeachers, setAllTeachers] = useState([]);
+  const [editForm, setEditForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -83,6 +90,110 @@ function UserDetailModal({ user: u, loading, error, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (!u || !canEdit) {
+      setEditForm(null);
+      return;
+    }
+    setEditForm({
+      first_name: u.first_name ?? '',
+      last_name: u.last_name ?? '',
+      email: u.email ?? '',
+      username: u.username ?? '',
+      gender: u.gender ?? 'UNKNOWN',
+      password: '',
+      weight_kg: u.settings?.weight_kg != null ? String(u.settings.weight_kg) : '',
+      height_sm: u.settings?.height_sm != null ? String(u.settings.height_sm) : '',
+      experience_months:
+        u.settings?.experience_months != null ? String(u.settings.experience_months) : '0',
+      teacherIds:
+        u.role === 'STUDENT'
+          ? [...(u.teacher_ids?.length ? u.teacher_ids : u.teachers?.map((t) => t.id) ?? [])]
+          : [],
+    });
+    setSaveError('');
+  }, [u, canEdit]);
+
+  useEffect(() => {
+    if (!canEdit || u?.role !== 'STUDENT') {
+      setAllTeachers([]);
+      return;
+    }
+    let cancelled = false;
+    getPublicTeachers()
+      .then((list) => {
+        if (!cancelled) setAllTeachers(list);
+      })
+      .catch(() => {
+        if (!cancelled) setAllTeachers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canEdit, u?.role, u?.id]);
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => (prev ? { ...prev, [name]: value } : prev));
+    setSaveError('');
+  };
+
+  const toggleTeacher = (id) => {
+    setEditForm((prev) => {
+      if (!prev) return prev;
+      const ids = prev.teacherIds.includes(id)
+        ? prev.teacherIds.filter((x) => x !== id)
+        : [...prev.teacherIds, id];
+      return { ...prev, teacherIds: ids };
+    });
+    setSaveError('');
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!u || !editForm) return;
+    if (u.role === 'STUDENT' && editForm.teacherIds.length < 1) {
+      setSaveError('Ընտրեք առնվազն մեկ ուսուցիչ');
+      return;
+    }
+    setSaving(true);
+    setSaveError('');
+    try {
+      const wRaw = editForm.weight_kg === '' ? null : parseFloat(editForm.weight_kg, 10);
+      const hRaw = editForm.height_sm === '' ? null : parseInt(editForm.height_sm, 10);
+      const expRaw =
+        editForm.experience_months === ''
+          ? 0
+          : parseInt(editForm.experience_months, 10);
+
+      const payload = {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        email: editForm.email,
+        username: editForm.username,
+        gender: editForm.gender,
+        settings: {
+          weight_kg: wRaw !== null && Number.isNaN(wRaw) ? null : wRaw,
+          height_sm: hRaw !== null && Number.isNaN(hRaw) ? null : hRaw,
+          experience_months: Number.isNaN(expRaw) ? 0 : expRaw,
+        },
+      };
+      if (editForm.password.trim()) {
+        payload.password = editForm.password;
+      }
+      if (u.role === 'STUDENT') {
+        payload.teacher_ids = editForm.teacherIds;
+      }
+      const updated = await updateUserById(u.id, payload);
+      onUserRefresh?.(updated);
+      onSaved?.();
+    } catch (err) {
+      setSaveError(err.message || 'Պահպանումը ձախողվեց');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div
       className="dashboard__modal-backdrop"
@@ -90,7 +201,7 @@ function UserDetailModal({ user: u, loading, error, onClose }) {
       role="presentation"
     >
       <div
-        className="dashboard__modal"
+        className={`dashboard__modal ${canEdit ? 'dashboard__modal--wide' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-detail-title"
@@ -108,13 +219,14 @@ function UserDetailModal({ user: u, loading, error, onClose }) {
         {error && !loading && (
           <div className="auth-page__error dashboard__modal-error">{error}</div>
         )}
-        {u && !loading && (
+        {u && !loading && !canEdit && (
           <>
             <h2 id="user-detail-title" className="dashboard__modal-title">
               {u.first_name} {u.last_name}
             </h2>
             <p className="dashboard__modal-sub">
-              @{u.username} · {genderLabel(u.gender)} · {roleLabel(u.role)}
+              @{u.username}
+              {u.email ? ` · ${u.email}` : ''} · {genderLabel(u.gender)} · {roleLabel(u.role)}
             </p>
 
             {u.role === 'STUDENT' && (
@@ -156,6 +268,150 @@ function UserDetailModal({ user: u, loading, error, onClose }) {
             )}
           </>
         )}
+
+        {u && !loading && canEdit && editForm && (
+          <form className="dashboard__edit-form" onSubmit={handleSave}>
+            <h2 id="user-detail-title" className="dashboard__modal-title">
+              Խմբագրել · {u.first_name} {u.last_name}
+            </h2>
+            <p className="dashboard__modal-sub">{roleLabel(u.role)}</p>
+
+            {saveError && (
+              <div className="auth-page__error dashboard__modal-error">{saveError}</div>
+            )}
+
+            <div className="dashboard__edit-grid">
+              <label className="contact-form__label">
+                <span>Անուն</span>
+                <input
+                  name="first_name"
+                  value={editForm.first_name}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                  required
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Ազգանուն</span>
+                <input
+                  name="last_name"
+                  value={editForm.last_name}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                  required
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Էլ. փոստ</span>
+                <input
+                  name="email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                  required
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Օգտանուն</span>
+                <input
+                  name="username"
+                  value={editForm.username}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                  required
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Սեռ</span>
+                <select
+                  name="gender"
+                  value={editForm.gender}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                >
+                  <option value="UNKNOWN">Չնշված</option>
+                  <option value="MALE">Արական</option>
+                  <option value="FEMALE">Իգական</option>
+                </select>
+              </label>
+              <label className="contact-form__label">
+                <span>Նոր գաղտնաբառ (ըստ ցանկության)</span>
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={editForm.password}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                  placeholder="Թողնել դատարկ"
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Քաշ (կգ)</span>
+                <input
+                  name="weight_kg"
+                  type="number"
+                  step="0.1"
+                  value={editForm.weight_kg}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Հասակ (սմ)</span>
+                <input
+                  name="height_sm"
+                  type="number"
+                  value={editForm.height_sm}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Փորձառության ամիսներ</span>
+                <input
+                  name="experience_months"
+                  type="number"
+                  min="0"
+                  value={editForm.experience_months}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                />
+              </label>
+            </div>
+
+            {u.role === 'STUDENT' && (
+              <div className="dashboard__modal-section">
+                <span className="auth-page__checkbox-group-title">Ուսուցիչներ</span>
+                <div className="auth-page__checkbox-list">
+                  {allTeachers.map((t) => (
+                    <label key={t.id} className="auth-page__checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={editForm.teacherIds.includes(t.id)}
+                        onChange={() => toggleTeacher(t.id)}
+                      />
+                      <span>
+                        {t.last_name} {t.first_name}{' '}
+                        <span className="auth-page__checkbox-meta">@{t.username}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="dashboard__modal-actions">
+              <button type="submit" className="btn btn--primary" disabled={saving}>
+                {saving ? 'Պահպանվում է...' : 'Պահպանել'}
+              </button>
+              <button type="button" className="btn btn--outline" onClick={onClose}>
+                Չեղարկել
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -177,6 +433,17 @@ export default function Dashboard() {
   const [detailUser, setDetailUser] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+
+  const reloadAdminOverview = useCallback(async () => {
+    if (!user || user.role !== 'ADMIN') return;
+    try {
+      const { teachers = [], students = [] } = await getAdminOverview();
+      setAdminTeachers(teachers);
+      setAdminStudents(students);
+    } catch {
+      /* ignore */
+    }
+  }, [user]);
 
   const openUserDetail = useCallback(async (p) => {
     setDetailOpen(true);
@@ -223,10 +490,10 @@ export default function Dashboard() {
           if (!cancelled) setPeople(students);
         } else if (user.role === 'ADMIN') {
           setHeading('Վահան — ադմին');
-          const { teachers = [], students = [] } = await getAdminOverview();
+          const { teachers = [], students: st = [] } = await getAdminOverview();
           if (!cancelled) {
             setAdminTeachers(teachers);
-            setAdminStudents(students);
+            setAdminStudents(st);
           }
         } else {
           setHeading('Վահան');
@@ -245,6 +512,14 @@ export default function Dashboard() {
     };
   }, [user, authLoading, navigate]);
 
+  const handleUserSaved = useCallback(async () => {
+    await reloadAdminOverview();
+  }, [reloadAdminOverview]);
+
+  const handleUserRefresh = useCallback((updated) => {
+    setDetailUser(updated);
+  }, []);
+
   if (authLoading || (!user && !error)) {
     return (
       <section className="page-section">
@@ -256,6 +531,7 @@ export default function Dashboard() {
   }
 
   const adminActivePeople = adminTab === 'teachers' ? adminTeachers : adminStudents;
+  const isAdmin = user.role === 'ADMIN';
 
   return (
     <section className="page-section">
@@ -338,6 +614,9 @@ export default function Dashboard() {
           loading={detailLoading}
           error={detailError}
           onClose={closeDetail}
+          canEdit={isAdmin}
+          onSaved={handleUserSaved}
+          onUserRefresh={handleUserRefresh}
         />
       )}
     </section>

@@ -30,8 +30,16 @@ export async function getAdminStudentsRoster() {
   return data.students ?? [];
 }
 
-/** user + teachers[] + students[] (կապը ըստ user.role) */
+/** user + settings + teachers[] + students[] + teacher_ids */
 export async function getUserWithRelations(userId) {
   const data = await apiRequest(`/users/${userId}`, { method: 'GET' });
+  return data.user;
+}
+
+export async function updateUserById(userId, body) {
+  const data = await apiRequest(`/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
   return data.user;
 }
