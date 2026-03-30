@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login as loginService } from '../services/authService';
+import { login as loginService, refreshSessionUser } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -31,10 +31,11 @@ export default function Login() {
     }
 
     try {
-      const response = await loginService(form.login, form.password);
-      login(response.user);
+      await loginService(form.login, form.password);
+      const user = await refreshSessionUser();
+      login(user);
       setForm({ login: '', password: '' });
-      navigate('/success', { state: { message: 'Մուտքը հաջողությամբ կատարվեց' } });
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Մուտքը ձախողվեց');
     } finally {

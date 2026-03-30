@@ -1,38 +1,15 @@
-const API_BASE_URL = 'http://localhost:5050/api/auth';
+import { apiRequest } from './httpClient.js';
 
-// Get stored token
-const getAccessToken = () => {
-  return localStorage.getItem('accessToken');
-};
-
-// API call helper
-const apiCall = async (endpoint, options = {}) => {
-  const token = getAccessToken();
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+function persistTokens(response) {
+  if (response.accessToken && response.refreshToken) {
+    localStorage.setItem('accessToken', response.accessToken);
+    localStorage.setItem('refreshToken', response.refreshToken);
   }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
-  }
-
-  return response.json();
-};
+}
 
 // Registration
 export const register = async (data) => {
-  const response = await apiCall('/register', {
+  const response = await apiRequest('/auth/register', {
     method: 'POST',
     body: JSON.stringify({
       email: data.email,
@@ -40,33 +17,32 @@ export const register = async (data) => {
       password: data.password,
       first_name: data.first_name,
       last_name: data.last_name,
+      ...(data.gender && { gender: data.gender }),
+      teacher_ids: data.teacher_ids,
     }),
   });
+  persistTokens(response);
   return response;
 };
 
 // Login
 export const login = async (loginData, password) => {
-  const response = await apiCall('/login', {
+  const response = await apiRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify({
       login_data: loginData,
       password,
     }),
   });
-  
-  // Save tokens
-  if (response.accessToken && response.refreshToken) {
-    localStorage.setItem('accessToken', response.accessToken);
-    localStorage.setItem('refreshToken', response.refreshToken);
-  }
-  
+
+  persistTokens(response);
+
   return response;
 };
 
 // Get profile
 export const getProfile = async () => {
-  return apiCall('/profile', {
+  return apiRequest('/auth/profile', {
     method: 'GET',
   });
 };
@@ -80,11 +56,16 @@ export const updateProfile = async (data) => {
   if (data.height_sm !== undefined) updateData.height_sm = data.height_sm;
   if (data.gender !== undefined) updateData.gender = data.gender;
 
-  return apiCall('/profile', {
+  return apiRequest('/auth/profile', {
     method: 'PATCH',
     body: JSON.stringify(updateData),
   });
 };
+
+export async function refreshSessionUser() {
+  const data = await getProfile();
+  return data.user;
+}
 
 // Logout
 export const logout = () => {

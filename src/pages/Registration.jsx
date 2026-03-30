@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../services/authService';
+import { register, refreshSessionUser } from '../services/authService';
+import { getPublicTeachers } from '../services/userService';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Registration() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({
     email: '',
     username: '',
@@ -11,8 +14,28 @@ export default function Registration() {
     last_name: '',
     password: '',
   });
+  const [teacherIds, setTeacherIds] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [teachersLoading, setTeachersLoading] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getPublicTeachers();
+        if (!cancelled) setTeachers(list);
+      } catch {
+        if (!cancelled) setError('Ուսուցիչների ցանկը բեռնել չհաջողվեց');
+      } finally {
+        if (!cancelled) setTeachersLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,8 +55,16 @@ export default function Registration() {
       return;
     }
 
+    if (!teacherIds.length) {
+      setError('Ընտրեք առնվազն մեկ ուսուցիչ');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await register(form);
+      await register({ ...form, teacher_ids: teacherIds });
+      const user = await refreshSessionUser();
+      login(user);
       setForm({
         email: '',
         username: '',
@@ -41,7 +72,8 @@ export default function Registration() {
         last_name: '',
         password: '',
       });
-      navigate('/success', { state: { message: 'Գրանցումը հաջողությամբ կատարվեց' } });
+      setTeacherIds([]);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Գրանցումը ձախողվեց');
     } finally {
@@ -113,11 +145,45 @@ export default function Registration() {
                     required
                   />
                 </label>
+                <div className="contact-form__label auth-page__field--full">
+                  <span className="auth-page__checkbox-group-title">Ուսուցիչներ</span>
+                  {teachersLoading ? (
+                    <span className="dashboard__loading">Բեռնվում է ուսուցիչների ցանկը...</span>
+                  ) : (
+                    <div className="auth-page__checkbox-list" role="group" aria-label="Ուսուցիչներ">
+                      {teachers.map((t) => (
+                        <label key={t.id} className="auth-page__checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={teacherIds.includes(t.id)}
+                            onChange={() => {
+                              setTeacherIds((prev) =>
+                                prev.includes(t.id)
+                                  ? prev.filter((id) => id !== t.id)
+                                  : [...prev, t.id]
+                              );
+                              setError('');
+                            }}
+                          />
+                          <span>
+                            {t.last_name} {t.first_name}{' '}
+                            <span className="auth-page__checkbox-meta">@{t.username}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {!teachersLoading && teachers.length === 0 && (
+                    <p className="dashboard__empty" style={{ marginTop: '0.5rem' }}>
+                      Հասանելի ուսուցիչ չկա։ Ադմինը պետք է ստեղծի ուսուցիչների հաշիվներ։
+                    </p>
+                  )}
+                </div>
               </div>
               <button 
                 type="submit" 
                 className="btn btn--primary auth-page__submit"
-                disabled={loading}
+                disabled={loading || teachersLoading || teachers.length === 0}
               >
                 {loading ? 'Բեռնվում է...' : 'Գրանցվել'}
               </button>

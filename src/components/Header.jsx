@@ -55,6 +55,13 @@ export default function Header() {
             {user ? (
               <>
                 <Link
+                  to="/dashboard"
+                  className="btn btn--outline header__auth-btn"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Վահան
+                </Link>
+                <Link
                   to="/profile"
                   className="btn btn--outline header__auth-btn"
                   onClick={() => setMenuOpen(false)}
