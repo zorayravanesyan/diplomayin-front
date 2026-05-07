@@ -130,7 +130,8 @@ img {
 .header__inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 1rem;
   padding: 1rem 1.25rem;
 }
 
@@ -147,10 +148,153 @@ img {
   color: var(--color-primary);
 }
 
+.header__left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
 .header__logo-img {
   width: 36px;
   height: 36px;
   display: block;
+}
+
+.header-streak {
+  --header-streak-glow: rgba(45, 212, 191, 0.3);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 0 0 auto;
+  order: -1;
+  padding: 0.35rem 0.75rem 0.35rem 0.4rem;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(rgba(15, 20, 25, 0.94), rgba(15, 20, 25, 0.94)) padding-box,
+    linear-gradient(135deg, rgba(45, 212, 191, 0.85), rgba(251, 191, 36, 0.65), rgba(244, 63, 94, 0.6)) border-box;
+  box-shadow:
+    0 0 18px var(--header-streak-glow),
+    inset 0 0 14px rgba(255, 255, 255, 0.04);
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition),
+    filter var(--transition);
+  animation: headerStreakFloat 3.5s ease-in-out infinite;
+}
+
+.header-streak:hover {
+  transform: translateY(-1px) scale(1.02);
+  filter: saturate(1.15);
+  box-shadow:
+    0 0 24px var(--header-streak-glow),
+    inset 0 0 18px rgba(255, 255, 255, 0.08);
+}
+
+.header-streak::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 18% 50%, rgba(45, 212, 191, 0.22), transparent 34%),
+    radial-gradient(circle at 78% 40%, rgba(251, 191, 36, 0.18), transparent 36%);
+  opacity: 0.9;
+}
+
+.header-streak--gif::before {
+  background:
+    linear-gradient(rgba(15, 20, 25, 0.62), rgba(15, 20, 25, 0.72)),
+    var(--header-streak-gif) center / cover no-repeat;
+  opacity: 1;
+}
+
+.header-streak::after {
+  content: '';
+  position: absolute;
+  inset: -80% -40%;
+  z-index: -1;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.15), transparent 58%);
+  transform: translateX(-80%);
+  animation: headerStreakSweep 3.8s ease-in-out infinite;
+}
+
+.header-streak .login-streak-badge {
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 50%;
+  animation-duration: 2.2s;
+}
+
+.header-streak .login-streak-badge__emoji,
+.header-streak .login-streak-badge__icon {
+  font-size: 1.35rem;
+}
+
+.header-streak .login-streak-badge__asset {
+  width: 1.7rem;
+  height: 1.7rem;
+}
+
+.header-streak__content {
+  display: grid;
+  min-width: 0;
+  line-height: 1.12;
+}
+
+.header-streak__count {
+  color: var(--color-text);
+  font-size: 0.84rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.header-streak__label {
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.header-streak .login-streak-effect {
+  right: 0.45rem;
+  bottom: 0.15rem;
+  height: 1.05rem;
+  transform: scale(0.62);
+  transform-origin: right bottom;
+}
+
+.header-streak--legendary,
+.header-streak--immortal,
+.header-streak--epic {
+  --header-streak-glow: rgba(251, 191, 36, 0.34);
+}
+
+@keyframes headerStreakFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes headerStreakSweep {
+  0%,
+  40% {
+    transform: translateX(-90%);
+  }
+  70%,
+  100% {
+    transform: translateX(90%);
+  }
 }
 
 .header__toggle {
@@ -176,6 +320,7 @@ img {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
 .header__link {
@@ -207,6 +352,27 @@ img {
 }
 
 @media (max-width: 768px) {
+  .header__inner {
+    gap: 0.75rem;
+  }
+  .header__left {
+    flex: 0 0 auto;
+    gap: 0.65rem;
+  }
+  .header__logo span {
+    display: none;
+  }
+  .header-streak {
+    flex: 1 1 auto;
+    max-width: 210px;
+    padding-right: 0.6rem;
+  }
+  .header-streak__count {
+    font-size: 0.78rem;
+  }
+  .header-streak__label {
+    font-size: 0.66rem;
+  }
   .header__toggle {
     display: flex;
   }
@@ -216,6 +382,7 @@ img {
     left: 0;
     right: 0;
     flex-direction: column;
+    margin-left: 0;
     padding: 1rem;
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
@@ -237,6 +404,22 @@ img {
   }
   .header__auth-btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .header-streak {
+    max-width: 170px;
+    gap: 0.4rem;
+  }
+
+  .header-streak .login-streak-badge {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .header-streak__label {
+    display: none;
   }
 }
 
@@ -1134,6 +1317,209 @@ img {
   grid-column: 1 / -1;
 }
 
+.login-streak-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin: -0.75rem 0 1.5rem;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(135deg, rgba(45, 212, 191, 0.8), rgba(251, 191, 36, 0.75), rgba(244, 63, 94, 0.7)) border-box;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 32px rgba(45, 212, 191, 0.18),
+    var(--shadow);
+  transform-origin: center;
+  animation: loginStreakScale 4s ease-in-out infinite;
+}
+
+.login-streak-card::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.28), transparent 28%),
+    radial-gradient(circle at 82% 30%, rgba(251, 191, 36, 0.24), transparent 24%),
+    radial-gradient(circle at 55% 90%, rgba(244, 63, 94, 0.18), transparent 30%);
+  filter: blur(18px);
+  animation: loginStreakGlow 5s linear infinite;
+}
+
+.login-streak-card__glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  transform: translateX(-100%);
+  animation: loginStreakSweep 3.8s ease-in-out infinite;
+}
+
+.login-streak-badge {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.25), transparent 0.8rem),
+    linear-gradient(135deg, rgba(45, 212, 191, 0.28), rgba(251, 191, 36, 0.18));
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.08),
+    0 0 24px rgba(45, 212, 191, 0.28);
+  animation: loginStreakPulse 1.8s ease-in-out infinite;
+}
+
+.login-streak-badge__emoji,
+.login-streak-badge__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.3rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.45));
+}
+
+.login-streak-badge__asset {
+  width: 3.2rem;
+  height: 3.2rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.5));
+}
+
+.login-streak-card__body {
+  min-width: 0;
+}
+
+.login-streak-card__label {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.2rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.login-streak-card__count {
+  display: block;
+  color: var(--color-text);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  line-height: 1.15;
+}
+
+.login-streak-card__message {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+.login-streak-effect {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.7rem;
+  display: inline-flex;
+  gap: 0.18rem;
+  align-items: flex-end;
+  height: 1.8rem;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.login-streak-effect span {
+  display: block;
+  width: 0.45rem;
+  border-radius: 999px 999px 0.25rem 0.25rem;
+  background: linear-gradient(180deg, #fef3c7, #f97316 52%, #ef4444);
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.75);
+  animation: loginStreakFire 0.9s ease-in-out infinite alternate;
+}
+
+.login-streak-effect span:nth-child(1) {
+  height: 1.15rem;
+}
+
+.login-streak-effect span:nth-child(2) {
+  height: 1.75rem;
+  animation-delay: 0.14s;
+}
+
+.login-streak-effect span:nth-child(3) {
+  height: 1.3rem;
+  animation-delay: 0.28s;
+}
+
+.login-streak-card--legendary,
+.login-streak-card--immortal {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 38px rgba(251, 191, 36, 0.22),
+    0 0 62px rgba(244, 63, 94, 0.12),
+    var(--shadow);
+}
+
+@keyframes loginStreakPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes loginStreakScale {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+}
+
+@keyframes loginStreakGlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loginStreakSweep {
+  0%,
+  35% {
+    transform: translateX(-120%);
+  }
+  70%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes loginStreakFire {
+  from {
+    transform: scaleY(0.72) translateY(0.12rem);
+    opacity: 0.62;
+  }
+  to {
+    transform: scaleY(1) translateY(-0.08rem);
+    opacity: 1;
+  }
+}
+
 .profile-diet {
   margin-top: 0;
 }
@@ -1309,6 +1695,26 @@ img {
 }
 
 @media (max-width: 640px) {
+  .login-streak-card {
+    align-items: flex-start;
+    padding: 0.9rem;
+  }
+
+  .login-streak-badge {
+    width: 3.65rem;
+    height: 3.65rem;
+    border-radius: 1rem;
+  }
+
+  .login-streak-badge__emoji,
+  .login-streak-badge__icon {
+    font-size: 1.9rem;
+  }
+
+  .login-streak-card__message {
+    font-size: 0.86rem;
+  }
+
   .profile-diet__modal {
     padding: 1.25rem;
   }

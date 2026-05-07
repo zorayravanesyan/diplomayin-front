@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { updateProfile } from '../services/authService';
 import { getRandomDietRecommendations } from '../services/dietService';
+import LoginStreakCard from '../components/streak/LoginStreak';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -141,6 +142,7 @@ export default function Profile() {
         <div className="auth-page">
           <div className="auth-page__content auth-page__content--large">
             <h1 className="auth-page__title">Պրոֆիլ</h1>
+            <LoginStreakCard streakCount={user.login_streak_count} />
             
             {error && <div className="auth-page__error">{error}</div>}
             {success && <div className="auth-page__success" style={{ color: 'green', marginBottom: '1rem' }}>{success}</div>}

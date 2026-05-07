@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { HeaderStreakBadge } from './streak/LoginStreak';
 import IMG from '../data/images';
 
 const navItems = [
@@ -25,10 +26,13 @@ export default function Header() {
   return (
     <header className="header">
       <div className="container header__inner">
-        <Link to="/" className="header__logo">
-          <img src={IMG.logo} alt="" className="header__logo-img" />
-          <span>Առողջ ապրելակերպ</span>
-        </Link>
+        {user && <HeaderStreakBadge streakCount={user.login_streak_count} />}
+        <div className="header__left">
+          <Link to="/" className="header__logo">
+            <img src={IMG.logo} alt="" className="header__logo-img" />
+            <span>Առողջ ապրելակերպ</span>
+          </Link>
+        </div>
         <button
           type="button"
           className="header__toggle"
