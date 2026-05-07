@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { updateProfile } from '../services/authService';
+import { getRandomDietRecommendations } from '../services/dietService';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -18,6 +19,14 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [dietOpen, setDietOpen] = useState(false);
+  const [dietLoading, setDietLoading] = useState(false);
+  const [dietError, setDietError] = useState('');
+  const [dietInfo, setDietInfo] = useState({
+    bmi: null,
+    age: null,
+    recommendations: [],
+  });
 
   useEffect(() => {
     if (user) {
@@ -31,6 +40,24 @@ export default function Profile() {
       });
     }
   }, [user]);
+
+  const loadDietRecommendations = async () => {
+    setDietLoading(true);
+    setDietError('');
+    try {
+      const result = await getRandomDietRecommendations();
+      setDietInfo(result);
+    } catch (err) {
+      setDietInfo({ bmi: null, age: null, recommendations: [] });
+      setDietError(
+        err.code === 'VALIDATION_ERROR'
+          ? 'Սննդակարգի առաջարկների համար լրացրեք քաշը և հասակը։'
+          : err.message || 'Սննդակարգի առաջարկները բեռնել չհաջողվեց'
+      );
+    } finally {
+      setDietLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,6 +110,15 @@ export default function Profile() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleOpenDiet = () => {
+    setDietOpen(true);
+    loadDietRecommendations();
+  };
+
+  const handleCloseDiet = () => {
+    setDietOpen(false);
   };
 
   if (!user) {
@@ -250,6 +286,15 @@ export default function Profile() {
               )}
             </form>
 
+            <button
+              type="button"
+              className="btn btn--outline auth-page__submit"
+              onClick={handleOpenDiet}
+              disabled={dietLoading}
+            >
+              {dietLoading ? 'Բեռնում...' : 'Սննդակարգի առաջարկներ'}
+            </button>
+
             <button 
               type="button" 
               className="btn btn--secondary auth-page__submit"
@@ -258,6 +303,99 @@ export default function Profile() {
             >
               Ելք
             </button>
+
+            {dietOpen && (
+              <div className="profile-diet__backdrop" onClick={handleCloseDiet} role="presentation">
+                <div
+                  className="profile-diet__modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="profile-diet-title"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="profile-diet__close"
+                    onClick={handleCloseDiet}
+                    aria-label="Փակել"
+                  >
+                    ×
+                  </button>
+                  <section className="profile-diet" aria-labelledby="profile-diet-title">
+                    <div className="profile-diet__header">
+                      <div>
+                        <h2 id="profile-diet-title" className="profile-diet__title">
+                          Սննդակարգի առաջարկներ
+                        </h2>
+                        <p className="profile-diet__subtitle">
+                          Առաջարկները ընտրվում են ըստ ձեր քաշի, հասակի, տարիքի և սեռի։
+                        </p>
+                      </div>
+                      {(dietInfo.bmi || dietInfo.age) && (
+                        <div className="profile-diet__meta">
+                          {dietInfo.bmi && <span>BMI՝ {dietInfo.bmi}</span>}
+                          {dietInfo.age && <span>Տարիք՝ {dietInfo.age}</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {dietLoading ? (
+                      <p className="profile-diet__state">Բեռնում...</p>
+                    ) : dietError ? (
+                      <div className="auth-page__error profile-diet__error">{dietError}</div>
+                    ) : dietInfo.recommendations.length === 0 ? (
+                      <p className="profile-diet__state">Առաջարկներ չկան։</p>
+                    ) : (
+                      <div className="profile-diet__grid">
+                        {dietInfo.recommendations.map((item) => (
+                          <article key={item.id} className="profile-diet__card">
+                            <div className="profile-diet__card-head">
+                              <span className="profile-diet__badge">
+                                {item.gender === 'male' ? 'Արական' : 'Իգական'}
+                              </span>
+                              <span className="profile-diet__range">
+                                BMI {item.min_bmi}–{item.max_bmi === -1 ? '∞' : item.max_bmi}
+                              </span>
+                            </div>
+                            {item.closeness_percentage != null && (
+                              <div className="profile-diet__match">
+                                Համապատասխանություն՝ {item.closeness_percentage}%
+                              </div>
+                            )}
+                            <ul className="profile-diet__meals">
+                              <li>
+                                <strong>Նախաճաշ՝</strong> {item.recommendations.breakfast}
+                              </li>
+                              <li>
+                                <strong>Ճաշ՝</strong> {item.recommendations.lunch}
+                              </li>
+                              <li>
+                                <strong>Ընթրիք՝</strong> {item.recommendations.dinner}
+                              </li>
+                            </ul>
+                            <div className="profile-diet__nutrients">
+                              {item.key_nutrients.map((nutrient) => (
+                                <span key={nutrient}>{nutrient}</span>
+                              ))}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+
+                    {!dietLoading && (
+                      <button
+                        type="button"
+                        className="btn btn--primary profile-diet__refresh"
+                        onClick={loadDietRecommendations}
+                      >
+                        Թարմացնել
+                      </button>
+                    )}
+                  </section>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

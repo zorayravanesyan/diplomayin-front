@@ -1134,6 +1134,198 @@ img {
   grid-column: 1 / -1;
 }
 
+.profile-diet {
+  margin-top: 0;
+}
+
+.profile-diet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.profile-diet__modal {
+  position: relative;
+  width: min(960px, 100%);
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow);
+}
+
+.profile-diet__close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    background var(--transition);
+}
+
+.profile-diet__close:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.profile-diet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-diet__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.35rem;
+}
+
+.profile-diet__subtitle,
+.profile-diet__state,
+.profile-diet__range {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+.profile-diet__subtitle,
+.profile-diet__state {
+  margin: 0.25rem 0 0;
+}
+
+.profile-diet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.profile-diet__meta span,
+.profile-diet__badge,
+.profile-diet__nutrients span {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.profile-diet__meta span,
+.profile-diet__badge {
+  padding: 0.32rem 0.65rem;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--color-primary);
+}
+
+.profile-diet__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.profile-diet__card {
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.profile-diet__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.profile-diet__meals {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.profile-diet__match {
+  width: fit-content;
+  margin-bottom: 0.85rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--color-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.profile-diet__meals strong {
+  color: var(--color-primary);
+}
+
+.profile-diet__nutrients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.profile-diet__nutrients span {
+  padding: 0.25rem 0.55rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-muted);
+}
+
+.profile-diet__error {
+  margin: 0;
+}
+
+.profile-diet__refresh {
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .profile-diet__modal {
+    padding: 1.25rem;
+  }
+
+  .profile-diet__header {
+    flex-direction: column;
+  }
+
+  .profile-diet__meta {
+    justify-content: flex-start;
+  }
+
+  .profile-diet__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .auth-page__checkbox-group-title {
   display: block;
   margin-bottom: 0.5rem;
