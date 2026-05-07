@@ -23,8 +23,8 @@ export default function Profile() {
       setForm({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        weight_kg: user.weight_kg || '',
-        height_sm: user.height_sm || '',
+        weight_kg: user?.settings?.weight_kg || '',
+        height_sm: user?.settings?.height_sm || '',
         gender: user.gender || '',
       });
     }
