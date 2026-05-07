@@ -147,6 +147,7 @@ function UserDetailModal({
       password: '',
       weight_kg: u.settings?.weight_kg != null ? String(u.settings.weight_kg) : '',
       height_sm: u.settings?.height_sm != null ? String(u.settings.height_sm) : '',
+      age: u.settings?.age != null ? String(u.settings.age) : '',
       experience_months:
         u.settings?.experience_months != null ? String(u.settings.experience_months) : '0',
       teacherIds:
@@ -206,6 +207,7 @@ function UserDetailModal({
     try {
       const wRaw = editForm.weight_kg === '' ? null : parseFloat(editForm.weight_kg, 10);
       const hRaw = editForm.height_sm === '' ? null : parseInt(editForm.height_sm, 10);
+      const ageRaw = editForm.age === '' ? null : parseInt(editForm.age, 10);
       const expRaw =
         editForm.experience_months === ''
           ? 0
@@ -220,6 +222,7 @@ function UserDetailModal({
         settings: {
           weight_kg: wRaw !== null && Number.isNaN(wRaw) ? null : wRaw,
           height_sm: hRaw !== null && Number.isNaN(hRaw) ? null : hRaw,
+          age: ageRaw !== null && Number.isNaN(ageRaw) ? null : ageRaw,
           experience_months: Number.isNaN(expRaw) ? 0 : expRaw,
         },
       };
@@ -423,6 +426,19 @@ function UserDetailModal({
                   name="height_sm"
                   type="number"
                   value={editForm.height_sm}
+                  onChange={handleEditChange}
+                  className="contact-form__input"
+                  disabled={readOnly}
+                />
+              </label>
+              <label className="contact-form__label">
+                <span>Տարիք</span>
+                <input
+                  name="age"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={editForm.age}
                   onChange={handleEditChange}
                   className="contact-form__input"
                   disabled={readOnly}

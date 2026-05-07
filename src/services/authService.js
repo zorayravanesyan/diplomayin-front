@@ -54,6 +54,7 @@ export const updateProfile = async (data) => {
   if (data.last_name !== undefined) updateData.last_name = data.last_name;
   if (data.weight_kg !== undefined) updateData.weight_kg = data.weight_kg;
   if (data.height_sm !== undefined) updateData.height_sm = data.height_sm;
+  if (data.age !== undefined) updateData.age = data.age;
   if (data.gender !== undefined) updateData.gender = data.gender;
 
   return apiRequest('/auth/profile', {

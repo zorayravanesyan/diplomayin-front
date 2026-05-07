@@ -11,6 +11,7 @@ export default function Profile() {
     last_name: '',
     weight_kg: '',
     height_sm: '',
+    age: '',
     gender: '',
   });
   const [error, setError] = useState('');
@@ -23,8 +24,9 @@ export default function Profile() {
       setForm({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        weight_kg: user?.settings?.weight_kg || '',
-        height_sm: user?.settings?.height_sm || '',
+        weight_kg: user?.settings?.weight_kg != null ? String(user.settings.weight_kg) : '',
+        height_sm: user?.settings?.height_sm != null ? String(user.settings.height_sm) : '',
+        age: user?.settings?.age != null ? String(user.settings.age) : '',
         gender: user.gender || '',
       });
     }
@@ -47,8 +49,18 @@ export default function Profile() {
       const updateData = {};
       if (form.first_name !== user.first_name) updateData.first_name = form.first_name;
       if (form.last_name !== user.last_name) updateData.last_name = form.last_name;
-      if (form.weight_kg !== user.weight_kg) updateData.weight_kg = parseFloat(form.weight_kg);
-      if (form.height_sm !== user.height_sm) updateData.height_sm = parseInt(form.height_sm, 10);
+      const currentWeight = user?.settings?.weight_kg == null ? '' : String(user.settings.weight_kg);
+      const currentHeight = user?.settings?.height_sm == null ? '' : String(user.settings.height_sm);
+      const currentAge = user?.settings?.age == null ? '' : String(user.settings.age);
+      if (form.weight_kg !== currentWeight) {
+        updateData.weight_kg = form.weight_kg === '' ? null : parseFloat(form.weight_kg);
+      }
+      if (form.height_sm !== currentHeight) {
+        updateData.height_sm = form.height_sm === '' ? null : parseInt(form.height_sm, 10);
+      }
+      if (form.age !== currentAge) {
+        updateData.age = form.age === '' ? null : parseInt(form.age, 10);
+      }
       if (form.gender !== user.gender) updateData.gender = form.gender;
 
       if (Object.keys(updateData).length === 0) {
@@ -169,6 +181,19 @@ export default function Profile() {
                   />
                 </label>
                 <label className="contact-form__label">
+                  <span>Տարիք</span>
+                  <input
+                    type="number"
+                    name="age"
+                    value={form.age}
+                    onChange={handleChange}
+                    className="contact-form__input"
+                    disabled={!isEditing}
+                    min="1"
+                    max="120"
+                  />
+                </label>
+                <label className="contact-form__label">
                   <span>Սեռ</span>
                   <select
                     name="gender"
@@ -201,8 +226,9 @@ export default function Profile() {
                       setForm({
                         first_name: user.first_name || '',
                         last_name: user.last_name || '',
-                        weight_kg: user.weight_kg || '',
-                        height_sm: user.height_sm || '',
+                        weight_kg: user?.settings?.weight_kg != null ? String(user.settings.weight_kg) : '',
+                        height_sm: user?.settings?.height_sm != null ? String(user.settings.height_sm) : '',
+                        age: user?.settings?.age != null ? String(user.settings.age) : '',
                         gender: user.gender || '',
                       });
                       setError('');
