@@ -68,6 +68,13 @@ export default function Header() {
                 >
                   Պրոֆիլ
                 </Link>
+                <Link
+                  to="/chat"
+                  className="btn btn--outline header__auth-btn"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Զրույց
+                </Link>
                 <button
                   type="button"
                   className="btn btn--primary header__auth-btn"
