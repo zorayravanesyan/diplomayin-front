@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getStreakQuote } from '../../constants/loginStreakQuotes';
 
 export const LOGIN_STREAK_LEVELS = [
   {
@@ -117,6 +118,7 @@ export function LoginStreakBadge({ level }) {
 export default function LoginStreakCard({ streakCount = 0 }) {
   const safeCount = Math.max(0, Number(streakCount) || 0);
   const level = getLoginStreakLevel(safeCount);
+  const quote = getStreakQuote(streakCount);
 
   return (
     <section className={`login-streak-card login-streak-card--${level.tone}`}>
@@ -124,8 +126,10 @@ export default function LoginStreakCard({ streakCount = 0 }) {
       <LoginStreakBadge level={level} />
       <div className="login-streak-card__body">
         <span className="login-streak-card__label">{level.label}</span>
-        <strong className="login-streak-card__count">{safeCount} օր անընդմեջ</strong>
-        <p className="login-streak-card__message">{level.message}</p>
+        <strong className="login-streak-card__count">
+          {safeCount > 0 ? `🔥 ${safeCount} օր անընդմեջ` : `${safeCount} օր անընդմեջ`}
+        </strong>
+        <p className="login-streak-card__message">&ldquo;{quote}&rdquo;</p>
       </div>
       <LoginStreakEffect animation={level.animation} tone={level.tone} />
     </section>
