@@ -172,6 +172,7 @@ img {
   min-width: 0;
   flex: 0 0 auto;
   order: -1;
+  margin-left: 0;
   padding: 0.35rem 0.75rem 0.35rem 0.4rem;
   overflow: hidden;
   border: 1px solid transparent;
@@ -210,7 +211,7 @@ img {
 
 .header-streak--gif::before {
   background:
-    linear-gradient(rgba(15, 20, 25, 0.62), rgba(15, 20, 25, 0.72)),
+    linear-gradient(90deg, rgba(15, 20, 25, 0.54), rgba(15, 20, 25, 0.84)),
     var(--header-streak-gif) center / cover no-repeat;
   opacity: 1;
 }
@@ -240,6 +241,15 @@ img {
 .header-streak .login-streak-badge__asset {
   width: 1.7rem;
   height: 1.7rem;
+}
+
+.header-streak--gif .login-streak-badge {
+  background:
+    linear-gradient(rgba(15, 20, 25, 0.25), rgba(15, 20, 25, 0.45)),
+    var(--header-streak-gif) center / cover no-repeat;
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.1),
+    0 0 26px var(--header-streak-glow);
 }
 
 .header-streak__content {
@@ -274,6 +284,21 @@ img {
 .header-streak--immortal,
 .header-streak--epic {
   --header-streak-glow: rgba(251, 191, 36, 0.34);
+}
+
+.header-streak--fire {
+  --header-streak-glow: rgba(249, 115, 22, 0.34);
+}
+
+.header-streak--legendary {
+  --header-streak-glow: rgba(251, 191, 36, 0.42);
+}
+
+.header-streak--immortal {
+  --header-streak-glow: rgba(244, 63, 94, 0.46);
+  background:
+    linear-gradient(rgba(15, 20, 25, 0.9), rgba(15, 20, 25, 0.9)) padding-box,
+    linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(244, 63, 94, 0.9), rgba(168, 85, 247, 0.85)) border-box;
 }
 
 @keyframes headerStreakFloat {
