@@ -56,6 +56,23 @@ export async function sendHumanMessage(conversationId, content) {
   });
 }
 
+export async function deleteHumanMessages(conversationId, messageIds) {
+  return apiRequest(`/human-chat/conversations/${conversationId}/messages/delete`, {
+    method: 'POST',
+    body: JSON.stringify({ message_ids: messageIds }),
+  });
+}
+
+export async function forwardHumanMessages(conversationId, messageIds, targetConversationIds) {
+  return apiRequest(`/human-chat/conversations/${conversationId}/messages/forward`, {
+    method: 'POST',
+    body: JSON.stringify({
+      message_ids: messageIds,
+      target_conversation_ids: targetConversationIds,
+    }),
+  });
+}
+
 export function connectHumanChatSocket() {
   const token = localStorage.getItem('accessToken');
   return io(getApiOrigin(), {

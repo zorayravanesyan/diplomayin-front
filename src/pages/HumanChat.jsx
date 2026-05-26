@@ -6,11 +6,14 @@ import HumanMessageList from '../components/humanChat/HumanMessageList';
 import CreateGroupModal from '../components/humanChat/CreateGroupModal';
 import CreateDmModal from '../components/humanChat/CreateDmModal';
 import ConversationInfoModal from '../components/humanChat/ConversationInfoModal';
+import ForwardMessagesModal from '../components/humanChat/ForwardMessagesModal';
 import MessageInput from '../components/chat/MessageInput';
 import {
   connectHumanChatSocket,
   createDm,
   createGroup,
+  deleteHumanMessages,
+  forwardHumanMessages,
   getHumanConversation,
   listHumanConversations,
   listHumanMessages,
@@ -64,6 +67,10 @@ export default function HumanChat() {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoLoading, setInfoLoading] = useState(false);
   const [conversationInfo, setConversationInfo] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState(() => new Set());
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => Number(c.id) === Number(activeConversationId)),
@@ -83,9 +90,18 @@ export default function HumanChat() {
     return { title: activeConversation.title || 'Խումբ', subtitle: 'Խմբային զրույց' };
   }, [activeConversation]);
 
+  const isOwner = activeConversation?.my_role === 'OWNER';
+  const selectedCount = selectedMessageIds.size;
+
+  const clearSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedMessageIds(new Set());
+  }, []);
+
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
-  }, [activeConversationId]);
+    clearSelection();
+  }, [activeConversationId, clearSelection]);
 
   const reloadConversations = useCallback(async () => {
     const items = await listHumanConversations();
@@ -151,13 +167,30 @@ export default function HumanChat() {
       );
     });
 
+    socket.on('human_messages.deleted', (payload) => {
+      const cid = payload?.conversation_id;
+      if (Number(cid) !== Number(activeConversationIdRef.current)) return;
+      const ids = new Set((payload?.message_ids ?? []).map((id) => Number(id)));
+      if (!ids.size) return;
+      setMessages((prev) => prev.filter((m) => !ids.has(Number(m.id))));
+      if (payload?.conversation) {
+        setConversations((prev) =>
+          applyConversationPreview(prev, {
+            conversationId: cid,
+            preview: payload.conversation.last_message_preview ?? null,
+            updatedAt: payload.conversation.updated_at,
+          })
+        );
+      }
+    });
+
     socket.on('human_conversation.joined', () => {
-      // Keep this as fetch because this event can happen for other conversations.
       reloadConversations().catch(() => {});
     });
 
     return () => {
       socket.off('human_message.created');
+      socket.off('human_messages.deleted');
       socket.off('human_conversation.joined');
       socket.disconnect();
       socketRef.current = null;
@@ -251,6 +284,61 @@ export default function HumanChat() {
     [reloadConversations]
   );
 
+  const toggleMessageSelect = useCallback((messageId) => {
+    setSelectedMessageIds((prev) => {
+      const next = new Set(prev);
+      const id = Number(messageId);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!activeConversationId || !isOwner || selectedCount === 0) return;
+    setActionLoading(true);
+    setError('');
+    try {
+      const ids = [...selectedMessageIds];
+      const result = await deleteHumanMessages(activeConversationId, ids);
+      setMessages((prev) => prev.filter((m) => !ids.includes(Number(m.id))));
+      if (result.conversation) {
+        setConversations((prev) =>
+          applyConversationPreview(prev, {
+            conversationId: activeConversationId,
+            preview: result.conversation.last_message_preview ?? null,
+            updatedAt: result.conversation.updated_at,
+          })
+        );
+      }
+      clearSelection();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoading(false);
+    }
+  }, [activeConversationId, clearSelection, isOwner, selectedCount, selectedMessageIds]);
+
+  const handleForwardTo = useCallback(
+    async (targetConversationId) => {
+      if (!activeConversationId || selectedCount === 0) return;
+      setActionLoading(true);
+      setError('');
+      try {
+        const ids = [...selectedMessageIds];
+        await forwardHumanMessages(activeConversationId, ids, [targetConversationId]);
+        setShowForwardModal(false);
+        clearSelection();
+        await reloadConversations();
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [activeConversationId, clearSelection, reloadConversations, selectedCount, selectedMessageIds]
+  );
+
   const handleSend = useCallback(
     async (content) => {
       if (!activeConversationId || sending) return;
@@ -305,21 +393,66 @@ export default function HumanChat() {
 
           <div className="chat-main">
             <div className="chat-main__header">
-              <div>
-                <h1 className="chat-main__title">
-                  <button
-                    type="button"
-                    className="tg-like__header-btn"
-                    onClick={() => activeConversationId && openConversationInfo(activeConversationId)}
-                    disabled={!activeConversationId}
-                  >
-                    {activeHeader.title}
-                  </button>
-                </h1>
-                <p className="chat-main__subtitle">
-                  {activeHeader.subtitle || 'Հաղորդագրությունները գալիս են իրական ժամանակում։'}
-                </p>
-              </div>
+              {selectionMode ? (
+                <div className="chat-actions">
+                  <span className="chat-actions__count">Ընտրված՝ {selectedCount}</span>
+                  <div className="chat-actions__buttons">
+                    <button
+                      type="button"
+                      className="btn btn--outline"
+                      onClick={() => setShowForwardModal(true)}
+                      disabled={selectedCount === 0 || actionLoading}
+                    >
+                      Փոխանցել
+                    </button>
+                    {isOwner && (
+                      <button
+                        type="button"
+                        className="btn btn--outline"
+                        onClick={handleDeleteSelected}
+                        disabled={selectedCount === 0 || actionLoading}
+                      >
+                        Ջնջել
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      onClick={clearSelection}
+                      disabled={actionLoading}
+                    >
+                      Չեղարկել
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="chat-main__header-row">
+                  <div>
+                    <h1 className="chat-main__title">
+                      <button
+                        type="button"
+                        className="tg-like__header-btn"
+                        onClick={() => activeConversationId && openConversationInfo(activeConversationId)}
+                        disabled={!activeConversationId}
+                      >
+                        {activeHeader.title}
+                      </button>
+                    </h1>
+                    <p className="chat-main__subtitle">
+                      {activeHeader.subtitle || 'Հաղորդագրությունները գալիս են իրական ժամանակում։'}
+                    </p>
+                  </div>
+                  {activeConversationId && messages.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn--outline chat-actions__select"
+                      onClick={() => setSelectionMode(true)}
+                    >
+                      Ընտրել
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {error && (
@@ -328,9 +461,20 @@ export default function HumanChat() {
               </div>
             )}
 
-            <HumanMessageList messages={messages} loading={loadingMessages} />
+            <HumanMessageList
+              messages={messages}
+              loading={loadingMessages}
+              selectionMode={selectionMode}
+              selectedIds={selectedMessageIds}
+              onToggleSelect={toggleMessageSelect}
+            />
             <MessageInput
-              disabled={!activeConversationId || loadingConversations || loadingMessages}
+              disabled={
+                !activeConversationId ||
+                loadingConversations ||
+                loadingMessages ||
+                selectionMode
+              }
               sending={sending}
               onSend={handleSend}
             />
@@ -358,6 +502,16 @@ export default function HumanChat() {
         onClose={() => !infoLoading && setShowInfoModal(false)}
         info={conversationInfo}
         loading={infoLoading}
+      />
+
+      <ForwardMessagesModal
+        open={showForwardModal}
+        onClose={() => !actionLoading && setShowForwardModal(false)}
+        conversations={conversations}
+        currentConversationId={activeConversationId}
+        selectedCount={selectedCount}
+        onForward={handleForwardTo}
+        submitting={actionLoading}
       />
     </section>
   );

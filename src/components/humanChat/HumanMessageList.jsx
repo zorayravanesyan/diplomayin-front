@@ -1,11 +1,26 @@
 import { useEffect, useRef } from 'react';
 
-export default function HumanMessageList({ messages, loading }) {
+function senderLabel(message) {
+  if (message.isMine) return 'Դուք';
+  return (
+    [message.sender?.first_name, message.sender?.last_name].filter(Boolean).join(' ').trim() ||
+    message.sender?.username ||
+    'Օգտատեր'
+  );
+}
+
+export default function HumanMessageList({
+  messages,
+  loading,
+  selectionMode,
+  selectedIds,
+  onToggleSelect,
+}) {
   const endRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages]);
+  }, [messages, selectionMode]);
 
   if (loading) {
     return (
@@ -28,28 +43,39 @@ export default function HumanMessageList({ messages, loading }) {
   }
 
   return (
-    <div className="chat-messages" aria-live="polite">
-      {messages.map((message) => (
-        <article
-          key={message.id}
-          className={`chat-message ${
-            message.isMine ? 'chat-message--user' : 'chat-message--assistant'
-          }`}
-        >
-          <div className="chat-message__bubble">
-            <span className="chat-message__author">
-              {message.isMine
-                ? 'Դուք'
-                : [message.sender?.first_name, message.sender?.last_name].filter(Boolean).join(' ').trim() ||
-                  message.sender?.username ||
-                  'Օգտատեր'}
-            </span>
-            <p className="chat-message__content">{message.content}</p>
-          </div>
-        </article>
-      ))}
+    <div className={`chat-messages ${selectionMode ? 'chat-messages--select' : ''}`} aria-live="polite">
+      {messages.map((message) => {
+        const isSelected = selectedIds.has(Number(message.id));
+        return (
+          <article
+            key={message.id}
+            className={`chat-message ${
+              message.isMine ? 'chat-message--user' : 'chat-message--assistant'
+            } ${isSelected ? 'chat-message--selected' : ''}`}
+            onClick={() => selectionMode && onToggleSelect(message.id)}
+            role={selectionMode ? 'button' : undefined}
+            tabIndex={selectionMode ? 0 : undefined}
+            onKeyDown={(e) => {
+              if (!selectionMode) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onToggleSelect(message.id);
+              }
+            }}
+          >
+            {selectionMode && (
+              <span className={`chat-message__check ${isSelected ? 'chat-message__check--on' : ''}`} aria-hidden="true">
+                {isSelected ? '✓' : ''}
+              </span>
+            )}
+            <div className="chat-message__bubble">
+              <span className="chat-message__author">{senderLabel(message)}</span>
+              <p className="chat-message__content">{message.content}</p>
+            </div>
+          </article>
+        );
+      })}
       <div ref={endRef} />
     </div>
   );
 }
-
