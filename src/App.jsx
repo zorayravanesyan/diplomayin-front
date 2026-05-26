@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Success from './pages/Success';
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
+import HumanChat from './pages/HumanChat';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="profile" element={<Profile />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="chat" element={<Chat />} />
+          <Route path="human-chat" element={<HumanChat />} />
           <Route path="success" element={<Success />} />
         </Route>
       </Routes>

@@ -51,3 +51,11 @@ export async function createTeacher(body) {
   });
   return data.user;
 }
+
+export async function searchUsers(q, { limit = 20 } = {}) {
+  const qs = new URLSearchParams();
+  if (q) qs.set('q', q);
+  if (limit) qs.set('limit', String(limit));
+  const data = await apiRequest(`/users/search?${qs.toString()}`, { method: 'GET' });
+  return data.users ?? [];
+}

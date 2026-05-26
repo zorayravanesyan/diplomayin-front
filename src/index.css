@@ -2488,3 +2488,132 @@ img {
     max-width: 92%;
   }
 }
+
+/* Human chat — group/DM member picker */
+.human-chat-picker__selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.human-chat-picker__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.15);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.human-chat-picker__chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--color-text);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.human-chat-picker__chip-remove:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.human-chat-picker__results {
+  min-height: 4rem;
+  margin-bottom: 1rem;
+}
+
+.human-chat-picker__hint {
+  margin: 0.5rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.human-chat-picker__list {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.human-chat-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.human-chat-picker__row:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+.human-chat-picker__row--selected {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.35);
+}
+
+.human-chat-picker__row:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.human-chat-picker__row-name {
+  font-weight: 600;
+}
+
+.human-chat-picker__row-meta {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.human-chat-picker__check {
+  margin-left: auto;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* Telegram-like conversation list items (layout only) */
+.chat-sidebar__item {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  column-gap: 0.75rem;
+  align-items: center;
+}
+
+.tg-like__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.92);
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35), transparent 55%),
+    linear-gradient(135deg, rgba(45, 212, 191, 0.95), rgba(56, 189, 248, 0.75));
+  box-shadow: 0 0 22px rgba(45, 212, 191, 0.2);
+}
+
+.tg-like__meta {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}

@@ -4,6 +4,16 @@ export function getApiRoot() {
   return API_ROOT;
 }
 
+export function getApiOrigin() {
+  try {
+    const url = new URL(API_ROOT);
+    // API_ROOT is expected to end with `/api`, but we only need scheme+host for sockets.
+    return url.origin;
+  } catch {
+    return 'http://localhost:5050';
+  }
+}
+
 /**
  * @param {string} path - e.g. '/auth/register' or '/users/teachers'
  * @param {RequestInit} options
