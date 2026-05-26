@@ -2476,12 +2476,24 @@ img {
     padding-left: 1rem;
   }
 
-  .chat-input {
+  .chat-input:not(.chat-input--human) {
     grid-template-columns: 1fr;
   }
 
-  .chat-input__button {
+  .chat-input:not(.chat-input--human) .chat-input__button {
     width: 100%;
+  }
+
+  .chat-input--human .chat-input__composer {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'tools tools'
+      'field send';
+  }
+
+  .chat-input--human .chat-input__tools {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .chat-message__bubble {
@@ -2751,4 +2763,221 @@ img {
 .chat-message__check--on {
   border-color: var(--color-primary);
   background: rgba(45, 212, 191, 0.2);
+}
+
+/* Human chat input — override default 2-col grid */
+.chat-input--human {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  grid-template-columns: unset;
+}
+
+.chat-input--human .chat-input__panels {
+  width: 100%;
+}
+
+.chat-input--human .chat-input__composer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'tools field send';
+  gap: 0.5rem 0.65rem;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.chat-input--human .chat-input__tools {
+  grid-area: tools;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-self: stretch;
+  justify-content: flex-end;
+}
+
+.chat-input--human .chat-input__field--human {
+  grid-area: field;
+  min-height: 2.75rem;
+  max-height: 7rem;
+  resize: none;
+  width: 100%;
+}
+
+.chat-input--human .chat-input__button--human {
+  grid-area: send;
+  min-height: 2.75rem;
+  min-width: 6.5rem;
+  width: auto;
+  align-self: flex-end;
+}
+
+.chat-input__tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.45rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-text);
+}
+
+.chat-input__tool--stickers {
+  min-width: auto;
+  padding: 0 0.55rem;
+}
+
+.chat-input__tool-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.chat-input__tool-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.chat-input__tool:hover:not(:disabled) {
+  background: rgba(45, 212, 191, 0.12);
+}
+
+.chat-input__tool--active {
+  border-color: var(--color-primary);
+  background: rgba(45, 212, 191, 0.18);
+}
+
+.chat-input__stickers {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.65rem 0.75rem 0.75rem;
+  background: rgba(15, 20, 25, 0.85);
+}
+
+.chat-input__stickers-head {
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sticker-picker--inline .sticker-picker__section {
+  margin-bottom: 0.65rem;
+}
+
+.sticker-picker--inline .sticker-picker__grid {
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 0.3rem;
+}
+
+.sticker-picker--inline .sticker-picker__item {
+  padding: 0.2rem;
+}
+
+.sticker-picker--inline .sticker-picker__item img {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.sticker-picker--inline .sticker-picker__section:last-child {
+  margin-bottom: 0;
+}
+
+.sticker-picker__section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.chat-input__tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-input__file {
+  display: none;
+}
+
+.chat-input__emoji {
+  margin-bottom: 0.75rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.chat-message__attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.chat-message__image {
+  max-width: min(320px, 100%);
+  max-height: 280px;
+  border-radius: var(--radius);
+  display: block;
+}
+
+.chat-message__sticker {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.sticker-picker__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sticker-picker__tab {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.sticker-picker__tab--active {
+  border-color: var(--color-primary);
+  background: rgba(45, 212, 191, 0.15);
+}
+
+.sticker-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 0.35rem;
+}
+
+.sticker-picker__item {
+  padding: 0.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.sticker-picker__item:hover {
+  border-color: var(--color-primary);
+}
+
+.sticker-picker__item img {
+  width: 100%;
+  height: auto;
+  display: block;
 }

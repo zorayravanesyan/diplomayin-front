@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { mediaUrl } from '../../services/uploadService.js';
 
 function senderLabel(message) {
   if (message.isMine) return 'Դուք';
@@ -6,6 +7,35 @@ function senderLabel(message) {
     [message.sender?.first_name, message.sender?.last_name].filter(Boolean).join(' ').trim() ||
     message.sender?.username ||
     'Օգտատեր'
+  );
+}
+
+function MessageAttachments({ attachments }) {
+  if (!attachments?.length) return null;
+
+  return (
+    <div className="chat-message__attachments">
+      {attachments.map((att) => {
+        const src = mediaUrl(att.url);
+        if (att.type === 'STICKER') {
+          return (
+            <img
+              key={att.id ?? att.url}
+              className="chat-message__sticker"
+              src={src}
+              alt="sticker"
+              width={att.width || 128}
+              height={att.height || 128}
+            />
+          );
+        }
+        return (
+          <a key={att.id ?? att.url} href={src} target="_blank" rel="noreferrer">
+            <img className="chat-message__image" src={src} alt="image" loading="lazy" />
+          </a>
+        );
+      })}
+    </div>
   );
 }
 
@@ -46,6 +76,7 @@ export default function HumanMessageList({
     <div className={`chat-messages ${selectionMode ? 'chat-messages--select' : ''}`} aria-live="polite">
       {messages.map((message) => {
         const isSelected = selectedIds.has(Number(message.id));
+        const hasText = Boolean(message.content?.trim());
         return (
           <article
             key={message.id}
@@ -64,13 +95,17 @@ export default function HumanMessageList({
             }}
           >
             {selectionMode && (
-              <span className={`chat-message__check ${isSelected ? 'chat-message__check--on' : ''}`} aria-hidden="true">
+              <span
+                className={`chat-message__check ${isSelected ? 'chat-message__check--on' : ''}`}
+                aria-hidden="true"
+              >
                 {isSelected ? '✓' : ''}
               </span>
             )}
             <div className="chat-message__bubble">
               <span className="chat-message__author">{senderLabel(message)}</span>
-              <p className="chat-message__content">{message.content}</p>
+              <MessageAttachments attachments={message.attachments} />
+              {hasText && <p className="chat-message__content">{message.content}</p>}
             </div>
           </article>
         );

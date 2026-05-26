@@ -49,10 +49,13 @@ export async function listHumanMessages(conversationId, { cursor = null, limit =
   return p;
 }
 
-export async function sendHumanMessage(conversationId, content) {
+export async function sendHumanMessage(conversationId, { content = '', attachments = [] } = {}) {
   return apiRequest(`/human-chat/conversations/${conversationId}/messages`, {
     method: 'POST',
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({
+      content: content ?? '',
+      attachments,
+    }),
   });
 }
 

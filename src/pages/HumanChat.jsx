@@ -7,7 +7,7 @@ import CreateGroupModal from '../components/humanChat/CreateGroupModal';
 import CreateDmModal from '../components/humanChat/CreateDmModal';
 import ConversationInfoModal from '../components/humanChat/ConversationInfoModal';
 import ForwardMessagesModal from '../components/humanChat/ForwardMessagesModal';
-import MessageInput from '../components/chat/MessageInput';
+import HumanMessageInput from '../components/humanChat/HumanMessageInput';
 import {
   connectHumanChatSocket,
   createDm,
@@ -32,6 +32,14 @@ function decorateMessages(rows, myUserId) {
     ...m,
     isMine: Number(m.sender_user_id) === Number(myUserId),
   }));
+}
+
+function messagePreview(message) {
+  if (message?.content?.trim()) return message.content.slice(0, 120);
+  const attachments = message?.attachments ?? [];
+  if (attachments.some((a) => a.type === 'STICKER')) return '🧩 Sticker';
+  if (attachments.length) return '📷 Photo';
+  return '';
 }
 
 function applyConversationPreview(prev, { conversationId, preview, updatedAt }) {
@@ -161,7 +169,7 @@ export default function HumanChat() {
       setConversations((prev) =>
         applyConversationPreview(prev, {
           conversationId: msg.conversation_id,
-          preview: msg.content?.slice?.(0, 120) ?? null,
+          preview: messagePreview(msg) || null,
           updatedAt: msg.created_at,
         })
       );
@@ -340,14 +348,19 @@ export default function HumanChat() {
   );
 
   const handleSend = useCallback(
-    async (content) => {
+    async ({ content = '', attachments = [] }) => {
       if (!activeConversationId || sending) return;
+      const trimmed = content?.trim?.() ?? '';
+      if (!trimmed && (!attachments || attachments.length === 0)) return;
+
       setSending(true);
       setError('');
 
       try {
-        const result = await sendHumanMessage(activeConversationId, content);
-        // optimistic add; socket event might also arrive
+        const result = await sendHumanMessage(activeConversationId, {
+          content: trimmed,
+          attachments,
+        });
         setMessages((prev) => {
           if (prev.some((m) => String(m.id) === String(result.message?.id))) return prev;
           return [...prev, { ...result.message, isMine: true }];
@@ -355,7 +368,7 @@ export default function HumanChat() {
         setConversations((prev) =>
           applyConversationPreview(prev, {
             conversationId: activeConversationId,
-            preview: result.message?.content?.slice?.(0, 120) ?? null,
+            preview: messagePreview(result.message) || null,
             updatedAt: result.message?.created_at ?? null,
           })
         );
@@ -468,7 +481,7 @@ export default function HumanChat() {
               selectedIds={selectedMessageIds}
               onToggleSelect={toggleMessageSelect}
             />
-            <MessageInput
+            <HumanMessageInput
               disabled={
                 !activeConversationId ||
                 loadingConversations ||
