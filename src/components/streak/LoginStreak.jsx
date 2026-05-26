@@ -138,6 +138,7 @@ export default function LoginStreakCard({ streakCount = 0 }) {
 
 export function HeaderStreakBadge({ streakCount = 0 }) {
   const safeCount = Math.max(0, Number(streakCount) || 0);
+  if (safeCount <= 0) return null;
   const level = getLoginStreakLevel(safeCount);
   const gifStyle = level.gif ? { '--header-streak-gif': `url("${level.gif}")` } : undefined;
 
