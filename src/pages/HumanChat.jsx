@@ -5,11 +5,13 @@ import HumanConversationSidebar from '../components/humanChat/HumanConversationS
 import HumanMessageList from '../components/humanChat/HumanMessageList';
 import CreateGroupModal from '../components/humanChat/CreateGroupModal';
 import CreateDmModal from '../components/humanChat/CreateDmModal';
+import ConversationInfoModal from '../components/humanChat/ConversationInfoModal';
 import MessageInput from '../components/chat/MessageInput';
 import {
   connectHumanChatSocket,
   createDm,
   createGroup,
+  getHumanConversation,
   listHumanConversations,
   listHumanMessages,
   sendHumanMessage,
@@ -59,11 +61,27 @@ export default function HumanChat() {
   const [showDmModal, setShowDmModal] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [creatingDm, setCreatingDm] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [conversationInfo, setConversationInfo] = useState(null);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => Number(c.id) === Number(activeConversationId)),
     [conversations, activeConversationId]
   );
+
+  const activeHeader = useMemo(() => {
+    if (!activeConversation) return { title: 'Զրույց', subtitle: '' };
+    if (activeConversation.type === 'DM') {
+      const peer = activeConversation.dm_peer;
+      const full = peer ? [peer.first_name, peer.last_name].filter(Boolean).join(' ').trim() : '';
+      return {
+        title: full || peer?.username || 'Անձնական զրույց',
+        subtitle: peer?.username ? `@${peer.username}` : '',
+      };
+    }
+    return { title: activeConversation.title || 'Խումբ', subtitle: 'Խմբային զրույց' };
+  }, [activeConversation]);
 
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
@@ -183,6 +201,20 @@ export default function HumanChat() {
     };
   }, [activeConversationId, user]);
 
+  const openConversationInfo = useCallback(async (conversationId) => {
+    setShowInfoModal(true);
+    setInfoLoading(true);
+    try {
+      const data = await getHumanConversation(conversationId);
+      setConversationInfo(data);
+    } catch (err) {
+      setConversationInfo(null);
+      setError(getErrorMessage(err));
+    } finally {
+      setInfoLoading(false);
+    }
+  }, []);
+
   const handleCreateGroupSubmit = useCallback(
     async ({ title, memberIds }) => {
       setCreatingGroup(true);
@@ -275,9 +307,18 @@ export default function HumanChat() {
             <div className="chat-main__header">
               <div>
                 <h1 className="chat-main__title">
-                  {activeConversation?.title || (activeConversation?.type === 'DM' ? 'Անձնական զրույց' : 'Խմբային զրույց')}
+                  <button
+                    type="button"
+                    className="tg-like__header-btn"
+                    onClick={() => activeConversationId && openConversationInfo(activeConversationId)}
+                    disabled={!activeConversationId}
+                  >
+                    {activeHeader.title}
+                  </button>
                 </h1>
-                <p className="chat-main__subtitle">Հաղորդագրությունները գալիս են իրական ժամանակում։</p>
+                <p className="chat-main__subtitle">
+                  {activeHeader.subtitle || 'Հաղորդագրությունները գալիս են իրական ժամանակում։'}
+                </p>
               </div>
             </div>
 
@@ -310,6 +351,13 @@ export default function HumanChat() {
         onSelect={handleCreateDmSelect}
         selecting={creatingDm}
         currentUserId={user?.id}
+      />
+
+      <ConversationInfoModal
+        open={showInfoModal}
+        onClose={() => !infoLoading && setShowInfoModal(false)}
+        info={conversationInfo}
+        loading={infoLoading}
       />
     </section>
   );

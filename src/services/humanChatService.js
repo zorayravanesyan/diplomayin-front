@@ -29,6 +29,10 @@ export async function listHumanConversations() {
   return data.conversations ?? [];
 }
 
+export async function getHumanConversation(conversationId) {
+  return apiRequest(`/human-chat/conversations/${conversationId}`, { method: 'GET' });
+}
+
 export async function listHumanMessages(conversationId, { cursor = null, limit = 30 } = {}) {
   const qs = new URLSearchParams();
   if (cursor) qs.set('cursor', cursor);
