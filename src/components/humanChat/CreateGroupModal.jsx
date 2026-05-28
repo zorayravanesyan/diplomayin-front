@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { searchUsers } from '../../services/userService.js';
+import { useDebouncedUserSearch } from '../../hooks/useDebouncedUserSearch.js';
 
 function displayName(user) {
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
@@ -15,52 +15,24 @@ export default function CreateGroupModal({
 }) {
   const [title, setTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState([]);
   const [selected, setSelected] = useState([]);
-  const [searching, setSearching] = useState(false);
   const [localError, setLocalError] = useState('');
+
+  const { results, searching } = useDebouncedUserSearch({
+    enabled: open,
+    query: searchQuery,
+    currentUserId,
+    excludeUserIds: selected.map((u) => u.id),
+  });
 
   useEffect(() => {
     if (!open) {
       setTitle('');
       setSearchQuery('');
-      setResults([]);
       setSelected([]);
       setLocalError('');
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const q = searchQuery.trim();
-    if (q.length < 1) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-
-    let cancelled = false;
-    setSearching(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const users = await searchUsers(q, { limit: 20 });
-        if (cancelled) return;
-        const filtered = users.filter((u) => Number(u.id) !== Number(currentUserId));
-        setResults(filtered);
-      } catch {
-        if (!cancelled) setResults([]);
-      } finally {
-        if (!cancelled) setSearching(false);
-      }
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [open, searchQuery, currentUserId]);
 
   if (!open) return null;
 
@@ -82,6 +54,10 @@ export default function CreateGroupModal({
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (selected.length < 1) {
+      setLocalError('Ընտրեք առնվազն մեկ անդամ');
+      return;
+    }
     setLocalError('');
     await onSubmit({
       title: title.trim() || null,
@@ -175,7 +151,11 @@ export default function CreateGroupModal({
             )}
           </div>
 
-          <button type="submit" className="btn btn--primary modal__submit" disabled={submitting}>
+          <button
+            type="submit"
+            className="btn btn--primary modal__submit"
+            disabled={submitting || selected.length < 1}
+          >
             {submitting ? 'Ստեղծվում է...' : 'Ստեղծել խումբ'}
           </button>
         </form>

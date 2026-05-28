@@ -6,6 +6,7 @@ import MessageInput from '../components/chat/MessageInput';
 import MessageList from '../components/chat/MessageList';
 import {
   createConversation,
+  deleteConversation,
   getConversation,
   listConversations,
   sendMessageStream,
@@ -40,6 +41,7 @@ export default function Chat() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState('');
   const activeRequestRef = useRef(null);
   const skipMessageLoadRef = useRef(null);
@@ -121,6 +123,28 @@ export default function Chat() {
       cancelled = true;
     };
   }, [activeConversationId]);
+
+  const handleDeleteConversation = useCallback(
+    async (conversationId) => {
+      if (!window.confirm('Ջնջե՞լ այս AI զրույցը։')) return;
+      setDeletingId(conversationId);
+      setError('');
+      try {
+        await deleteConversation(conversationId);
+        const remaining = conversations.filter((c) => Number(c.id) !== Number(conversationId));
+        setConversations(remaining);
+        if (Number(activeConversationId) === Number(conversationId)) {
+          setActiveConversationId(remaining[0]?.id ?? null);
+          setMessages([]);
+        }
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [activeConversationId, conversations]
+  );
 
   const handleCreateConversation = useCallback(async () => {
     if (creating) return;
@@ -225,6 +249,8 @@ export default function Chat() {
             loading={loadingConversations}
             onSelectConversation={setActiveConversationId}
             onCreateConversation={handleCreateConversation}
+            onDeleteConversation={handleDeleteConversation}
+            deletingId={deletingId}
           />
 
           <div className="chat-main">
@@ -237,7 +263,19 @@ export default function Chat() {
                   Գրեք հարցը, իսկ օգնականը կպատասխանի իրական ժամանակում։
                 </p>
               </div>
-              {creating && <span className="chat-main__badge">Ստեղծվում է...</span>}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {creating && <span className="chat-main__badge">Ստեղծվում է...</span>}
+                {activeConversationId && (
+                  <button
+                    type="button"
+                    className="btn btn--outline"
+                    onClick={() => handleDeleteConversation(activeConversationId)}
+                    disabled={Number(deletingId) === Number(activeConversationId)}
+                  >
+                    Ջնջել զրույցը
+                  </button>
+                )}
+              </div>
             </div>
 
             {error && (

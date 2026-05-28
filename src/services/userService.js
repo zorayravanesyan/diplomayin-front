@@ -52,10 +52,25 @@ export async function createTeacher(body) {
   return data.user;
 }
 
+const searchInflight = new Map();
+
 export async function searchUsers(q, { limit = 20 } = {}) {
+  const trimmed = typeof q === 'string' ? q.trim() : '';
+  const key = `${trimmed}|${limit}`;
+  if (searchInflight.has(key)) {
+    return searchInflight.get(key);
+  }
+
   const qs = new URLSearchParams();
-  if (q) qs.set('q', q);
+  if (trimmed) qs.set('q', trimmed);
   if (limit) qs.set('limit', String(limit));
-  const data = await apiRequest(`/users/search?${qs.toString()}`, { method: 'GET' });
-  return data.users ?? [];
+
+  const promise = apiRequest(`/users/search?${qs.toString()}`, { method: 'GET' })
+    .then((data) => data.users ?? [])
+    .finally(() => {
+      searchInflight.delete(key);
+    });
+
+  searchInflight.set(key, promise);
+  return promise;
 }

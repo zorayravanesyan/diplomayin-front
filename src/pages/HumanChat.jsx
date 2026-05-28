@@ -9,15 +9,19 @@ import ConversationInfoModal from '../components/humanChat/ConversationInfoModal
 import ForwardMessagesModal from '../components/humanChat/ForwardMessagesModal';
 import HumanMessageInput from '../components/humanChat/HumanMessageInput';
 import {
+  addHumanGroupMembers,
   connectHumanChatSocket,
   createDm,
   createGroup,
+  deleteHumanConversation,
   deleteHumanMessages,
   forwardHumanMessages,
   getHumanConversation,
   listHumanConversations,
   listHumanMessages,
+  removeHumanGroupMember,
   sendHumanMessage,
+  updateHumanGroup,
 } from '../services/humanChatService';
 
 function getErrorMessage(error) {
@@ -100,6 +104,11 @@ export default function HumanChat() {
 
   const isOwner = activeConversation?.my_role === 'OWNER';
   const selectedCount = selectedMessageIds.size;
+  const selectedOwnCount = useMemo(() => {
+    if (!selectedCount) return 0;
+    const ids = selectedMessageIds;
+    return messages.filter((m) => m.isMine && ids.has(Number(m.id))).length;
+  }, [messages, selectedCount, selectedMessageIds]);
 
   const clearSelection = useCallback(() => {
     setSelectionMode(false);
@@ -196,10 +205,64 @@ export default function HumanChat() {
       reloadConversations().catch(() => {});
     });
 
+    socket.on('human_conversation.updated', (payload) => {
+      const conv = payload?.conversation;
+      if (!conv?.id) return;
+      setConversations((prev) =>
+        prev.map((c) =>
+          Number(c.id) === Number(conv.id)
+            ? {
+                ...c,
+                title: conv.title ?? c.title,
+                updated_at: conv.updated_at ?? c.updated_at,
+              }
+            : c
+        )
+      );
+      if (Number(payload.conversation_id) === Number(activeConversationIdRef.current)) {
+        setConversationInfo((prev) =>
+          prev?.conversation
+            ? {
+                ...prev,
+                conversation: { ...prev.conversation, ...conv },
+                members: payload.members ?? prev.members,
+              }
+            : prev
+        );
+      }
+    });
+
+    socket.on('human_conversation.deleted', (payload) => {
+      const cid = payload?.conversation_id;
+      if (!cid) return;
+      setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(cid)));
+      if (Number(cid) === Number(activeConversationIdRef.current)) {
+        setActiveConversationId(null);
+        setMessages([]);
+        setShowInfoModal(false);
+        setConversationInfo(null);
+      }
+    });
+
+    socket.on('human_conversation.removed', (payload) => {
+      const cid = payload?.conversation_id;
+      if (!cid) return;
+      setConversations((prev) => prev.filter((c) => Number(c.id) !== Number(cid)));
+      if (Number(cid) === Number(activeConversationIdRef.current)) {
+        setActiveConversationId(null);
+        setMessages([]);
+        setShowInfoModal(false);
+        setConversationInfo(null);
+      }
+    });
+
     return () => {
       socket.off('human_message.created');
       socket.off('human_messages.deleted');
       socket.off('human_conversation.joined');
+      socket.off('human_conversation.updated');
+      socket.off('human_conversation.deleted');
+      socket.off('human_conversation.removed');
       socket.disconnect();
       socketRef.current = null;
     };
@@ -303,11 +366,13 @@ export default function HumanChat() {
   }, []);
 
   const handleDeleteSelected = useCallback(async () => {
-    if (!activeConversationId || !isOwner || selectedCount === 0) return;
+    if (!activeConversationId || selectedOwnCount === 0) return;
     setActionLoading(true);
     setError('');
     try {
-      const ids = [...selectedMessageIds];
+      const ids = messages
+        .filter((m) => m.isMine && selectedMessageIds.has(Number(m.id)))
+        .map((m) => m.id);
       const result = await deleteHumanMessages(activeConversationId, ids);
       setMessages((prev) => prev.filter((m) => !ids.includes(Number(m.id))));
       if (result.conversation) {
@@ -325,7 +390,91 @@ export default function HumanChat() {
     } finally {
       setActionLoading(false);
     }
-  }, [activeConversationId, clearSelection, isOwner, selectedCount, selectedMessageIds]);
+  }, [activeConversationId, clearSelection, messages, selectedMessageIds, selectedOwnCount]);
+
+  const handleUpdateGroupTitle = useCallback(
+    async (title) => {
+      if (!activeConversationId) return;
+      setActionLoading(true);
+      setError('');
+      try {
+        const result = await updateHumanGroup(activeConversationId, title);
+        setConversations((prev) =>
+          prev.map((c) =>
+            Number(c.id) === Number(activeConversationId)
+              ? { ...c, title: result.conversation.title }
+              : c
+          )
+        );
+        const data = await getHumanConversation(activeConversationId);
+        setConversationInfo(data);
+      } catch (err) {
+        setError(getErrorMessage(err));
+        throw err;
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [activeConversationId]
+  );
+
+  const handleAddGroupMembers = useCallback(
+    async (memberIds) => {
+      if (!activeConversationId) return;
+      setActionLoading(true);
+      setError('');
+      try {
+        const data = await addHumanGroupMembers(activeConversationId, memberIds);
+        setConversationInfo(data);
+        await reloadConversations();
+      } catch (err) {
+        setError(getErrorMessage(err));
+        throw err;
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [activeConversationId, reloadConversations]
+  );
+
+  const handleRemoveGroupMember = useCallback(
+    async (userId) => {
+      if (!activeConversationId) return;
+      setActionLoading(true);
+      setError('');
+      try {
+        await removeHumanGroupMember(activeConversationId, userId);
+        const data = await getHumanConversation(activeConversationId);
+        setConversationInfo(data);
+      } catch (err) {
+        setError(getErrorMessage(err));
+        throw err;
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [activeConversationId]
+  );
+
+  const handleDeleteConversation = useCallback(async () => {
+    if (!activeConversationId) return;
+    setActionLoading(true);
+    setError('');
+    try {
+      await deleteHumanConversation(activeConversationId);
+      const remaining = conversations.filter((c) => Number(c.id) !== Number(activeConversationId));
+      setConversations(remaining);
+      setActiveConversationId(remaining[0]?.id ?? null);
+      setMessages([]);
+      setShowInfoModal(false);
+      setConversationInfo(null);
+    } catch (err) {
+      setError(getErrorMessage(err));
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  }, [activeConversationId, conversations]);
 
   const handleForwardTo = useCallback(
     async (targetConversationId) => {
@@ -418,16 +567,19 @@ export default function HumanChat() {
                     >
                       Փոխանցել
                     </button>
-                    {isOwner && (
-                      <button
-                        type="button"
-                        className="btn btn--outline"
-                        onClick={handleDeleteSelected}
-                        disabled={selectedCount === 0 || actionLoading}
-                      >
-                        Ջնջել
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="btn btn--outline"
+                      onClick={handleDeleteSelected}
+                      disabled={selectedOwnCount === 0 || actionLoading}
+                      title={
+                        selectedCount > selectedOwnCount
+                          ? 'Կարող եք ջնջել միայն ձեր հաղորդագրությունները'
+                          : undefined
+                      }
+                    >
+                      Ջնջել
+                    </button>
                     <button
                       type="button"
                       className="btn btn--primary"
@@ -512,9 +664,16 @@ export default function HumanChat() {
 
       <ConversationInfoModal
         open={showInfoModal}
-        onClose={() => !infoLoading && setShowInfoModal(false)}
+        onClose={() => !infoLoading && !actionLoading && setShowInfoModal(false)}
         info={conversationInfo}
         loading={infoLoading}
+        currentUserId={user?.id}
+        isOwner={isOwner}
+        onUpdateTitle={handleUpdateGroupTitle}
+        onAddMembers={handleAddGroupMembers}
+        onRemoveMember={handleRemoveGroupMember}
+        onDeleteConversation={handleDeleteConversation}
+        actionLoading={actionLoading}
       />
 
       <ForwardMessagesModal

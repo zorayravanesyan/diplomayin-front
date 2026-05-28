@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { searchUsers } from '../../services/userService.js';
+import { useDebouncedUserSearch } from '../../hooks/useDebouncedUserSearch.js';
 
 function displayName(user) {
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
@@ -8,46 +8,18 @@ function displayName(user) {
 
 export default function CreateDmModal({ open, onClose, onSelect, selecting, currentUserId }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
+
+  const { results, searching } = useDebouncedUserSearch({
+    enabled: open,
+    query: searchQuery,
+    currentUserId,
+  });
 
   useEffect(() => {
     if (!open) {
       setSearchQuery('');
-      setResults([]);
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const q = searchQuery.trim();
-    if (q.length < 1) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-
-    let cancelled = false;
-    setSearching(true);
-
-    const timer = setTimeout(async () => {
-      try {
-        const users = await searchUsers(q, { limit: 20 });
-        if (cancelled) return;
-        setResults(users.filter((u) => Number(u.id) !== Number(currentUserId)));
-      } catch {
-        if (!cancelled) setResults([]);
-      } finally {
-        if (!cancelled) setSearching(false);
-      }
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [open, searchQuery, currentUserId]);
 
   if (!open) return null;
 

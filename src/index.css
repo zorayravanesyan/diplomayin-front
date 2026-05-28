@@ -2198,6 +2198,48 @@ img {
   list-style: none;
 }
 
+.chat-sidebar__item-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+.chat-sidebar__item-wrap .chat-sidebar__item {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-sidebar__delete {
+  flex-shrink: 0;
+  align-self: center;
+  width: 2rem;
+  height: 2rem;
+  margin-right: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.chat-sidebar__delete:hover:not(:disabled) {
+  border-color: rgba(192, 57, 43, 0.4);
+  background: rgba(192, 57, 43, 0.12);
+  color: #e74c3c;
+}
+
+.chat-sidebar__delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .chat-sidebar__item {
   display: grid;
   width: 100%;

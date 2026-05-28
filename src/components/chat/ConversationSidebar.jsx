@@ -14,6 +14,8 @@ export default function ConversationSidebar({
   loading,
   onSelectConversation,
   onCreateConversation,
+  onDeleteConversation,
+  deletingId,
 }) {
   return (
     <aside className="chat-sidebar" aria-label="Զրույցների ցանկ">
@@ -44,7 +46,7 @@ export default function ConversationSidebar({
       ) : (
         <ul className="chat-sidebar__list">
           {conversations.map((conversation) => (
-            <li key={conversation.id}>
+            <li key={conversation.id} className="chat-sidebar__item-wrap">
               <button
                 type="button"
                 className={`chat-sidebar__item ${
@@ -62,6 +64,21 @@ export default function ConversationSidebar({
                 )}
                 <span className="chat-sidebar__date">{formatDate(conversation.updated_at)}</span>
               </button>
+              {onDeleteConversation && (
+                <button
+                  type="button"
+                  className="chat-sidebar__delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteConversation(conversation.id);
+                  }}
+                  disabled={Number(deletingId) === Number(conversation.id)}
+                  aria-label="Ջնջել զրույցը"
+                  title="Ջնջել"
+                >
+                  ×
+                </button>
+              )}
             </li>
           ))}
         </ul>

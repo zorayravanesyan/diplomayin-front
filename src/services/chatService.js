@@ -61,6 +61,12 @@ export async function sendMessage(conversationId, content) {
   });
 }
 
+export async function deleteConversation(conversationId) {
+  return apiRequest(`/chat/conversations/${conversationId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function sendMessageStream(conversationId, content, { onChunk, signal } = {}) {
   const response = await fetch(`${getApiRoot()}/chat/conversations/${conversationId}/messages/stream`, {
     method: 'POST',
