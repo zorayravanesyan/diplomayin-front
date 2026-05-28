@@ -17,6 +17,13 @@ function titleForConversation(item) {
   return item.title || 'Խմբային զրույց';
 }
 
+function unreadLabel(count) {
+  const n = Number(count) || 0;
+  if (n <= 0) return null;
+  if (n === 1) return '1 չկարդացված';
+  return `${n} չկարդացված`;
+}
+
 function initialsForConversation(item) {
   const title = titleForConversation(item);
   const parts = String(title).trim().split(/\s+/).filter(Boolean);
@@ -78,30 +85,42 @@ export default function HumanConversationSidebar({
         </div>
       ) : (
         <ul className="chat-sidebar__list">
-          {conversations.map((conversation) => (
-            <li key={conversation.id}>
-              <button
-                type="button"
-                className={`chat-sidebar__item ${
-                  Number(activeConversationId) === Number(conversation.id)
-                    ? 'chat-sidebar__item--active'
-                    : ''
-                }`}
-                onClick={() => onSelectConversation(conversation.id)}
-              >
-                <span className="tg-like__avatar" aria-hidden="true">
-                  {initialsForConversation(conversation)}
-                </span>
-                <span className="tg-like__meta">
-                  <span className="chat-sidebar__item-title">{titleForConversation(conversation)}</span>
-                  {conversation.last_message_preview && (
-                    <span className="chat-sidebar__preview">{conversation.last_message_preview}</span>
-                  )}
-                </span>
-                <span className="chat-sidebar__date">{formatDate(conversation.updated_at)}</span>
-              </button>
-            </li>
-          ))}
+          {conversations.map((conversation) => {
+            const unread = Number(conversation.unread_count) || 0;
+            const isActive = Number(activeConversationId) === Number(conversation.id);
+            return (
+              <li key={conversation.id}>
+                <button
+                  type="button"
+                  className={`chat-sidebar__item ${isActive ? 'chat-sidebar__item--active' : ''} ${
+                    unread > 0 && !isActive ? 'chat-sidebar__item--unread' : ''
+                  }`}
+                  onClick={() => onSelectConversation(conversation.id)}
+                >
+                  <span className="tg-like__avatar" aria-hidden="true">
+                    {initialsForConversation(conversation)}
+                  </span>
+                  <span className="tg-like__meta">
+                    <span className="chat-sidebar__item-title">{titleForConversation(conversation)}</span>
+                    {conversation.last_message_preview && (
+                      <span className="chat-sidebar__preview">{conversation.last_message_preview}</span>
+                    )}
+                    {unread > 0 && !isActive && (
+                      <span className="chat-sidebar__unread-label">{unreadLabel(unread)}</span>
+                    )}
+                  </span>
+                  <span className="chat-sidebar__item-end">
+                    {unread > 0 && !isActive && (
+                      <span className="chat-sidebar__unread-badge" aria-label={unreadLabel(unread)}>
+                        {unread > 99 ? '99+' : unread}
+                      </span>
+                    )}
+                    <span className="chat-sidebar__date">{formatDate(conversation.updated_at)}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </aside>

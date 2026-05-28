@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { HumanChatUnreadProvider } from './contexts/HumanChatUnreadContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -16,8 +17,9 @@ import HumanChat from './pages/HumanChat';
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/" element={<Layout />}>
+      <HumanChatUnreadProvider>
+        <Routes>
+          <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="about" element={<About />} />
           <Route path="sliders" element={<Sliders />} />
@@ -29,8 +31,9 @@ function App() {
           <Route path="chat" element={<Chat />} />
           <Route path="human-chat" element={<HumanChat />} />
           <Route path="success" element={<Success />} />
-        </Route>
-      </Routes>
+          </Route>
+        </Routes>
+      </HumanChatUnreadProvider>
     </AuthProvider>
   );
 }

@@ -102,6 +102,16 @@ export async function deleteHumanConversation(conversationId) {
   });
 }
 
+export async function getHumanUnreadSummary() {
+  return apiRequest('/human-chat/unread', { method: 'GET' });
+}
+
+export async function markHumanConversationRead(conversationId) {
+  return apiRequest(`/human-chat/conversations/${conversationId}/read`, {
+    method: 'POST',
+  });
+}
+
 export function connectHumanChatSocket() {
   const token = localStorage.getItem('accessToken');
   return io(getApiOrigin(), {

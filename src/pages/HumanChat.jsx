@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useHumanChatUnread } from '../contexts/HumanChatUnreadContext';
 import HumanConversationSidebar from '../components/humanChat/HumanConversationSidebar';
 import HumanMessageList from '../components/humanChat/HumanMessageList';
 import CreateGroupModal from '../components/humanChat/CreateGroupModal';
@@ -60,6 +61,7 @@ function applyConversationPreview(prev, { conversationId, preview, updatedAt }) 
 
 export default function HumanChat() {
   const { user, loading: authLoading } = useAuth();
+  const { markRead, byConversation } = useHumanChatUnread();
   const navigate = useNavigate();
   const socketRef = useRef(null);
   const activeConversationIdRef = useRef(null);
@@ -120,6 +122,25 @@ export default function HumanChat() {
     clearSelection();
   }, [activeConversationId, clearSelection]);
 
+  useEffect(() => {
+    if (!activeConversationId) return;
+    markRead(activeConversationId);
+    setConversations((prev) =>
+      prev.map((c) =>
+        Number(c.id) === Number(activeConversationId) ? { ...c, unread_count: 0 } : c
+      )
+    );
+  }, [activeConversationId, markRead]);
+
+  useEffect(() => {
+    setConversations((prev) =>
+      prev.map((c) => ({
+        ...c,
+        unread_count: byConversation[Number(c.id)] ?? c.unread_count ?? 0,
+      }))
+    );
+  }, [byConversation]);
+
   const reloadConversations = useCallback(async () => {
     const items = await listHumanConversations();
     setConversations(items);
@@ -169,18 +190,26 @@ export default function HumanChat() {
     socket.on('human_message.created', (payload) => {
       const msg = payload?.message;
       if (!msg) return;
-      if (Number(msg.conversation_id) !== Number(activeConversationIdRef.current)) return;
+      const isActive = Number(msg.conversation_id) === Number(activeConversationIdRef.current);
+      if (!isActive) return;
+
+      const isMine = Number(msg.sender_user_id) === Number(user.id);
+      if (!isMine) {
+        markRead(msg.conversation_id);
+      }
+
       setMessages((prev) => {
-        // Dedup: some UIs may optimistically add same id before socket arrives
         if (prev.some((m) => String(m.id) === String(msg.id))) return prev;
-        return [...prev, { ...msg, isMine: Number(msg.sender_user_id) === Number(user.id) }];
+        return [...prev, { ...msg, isMine }];
       });
       setConversations((prev) =>
         applyConversationPreview(prev, {
           conversationId: msg.conversation_id,
           preview: messagePreview(msg) || null,
           updatedAt: msg.created_at,
-        })
+        }).map((c) =>
+          Number(c.id) === Number(msg.conversation_id) ? { ...c, unread_count: 0 } : c
+        )
       );
     });
 
@@ -266,7 +295,7 @@ export default function HumanChat() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [reloadConversations, user]);
+  }, [markRead, reloadConversations, user]);
 
   // Ensure this socket joins the active conversation room (server-side)
   useEffect(() => {

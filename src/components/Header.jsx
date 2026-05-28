@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useHumanChatUnread } from '../contexts/HumanChatUnreadContext';
 import { HeaderStreakBadge } from './streak/LoginStreak';
 import IMG from '../data/images';
 
@@ -16,6 +17,8 @@ export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { totalUnread } = useHumanChatUnread();
+  const hasUnread = totalUnread > 0;
 
   const handleLogout = () => {
     logout();
@@ -81,10 +84,18 @@ export default function Header() {
                 </Link>
                 <Link
                   to="/human-chat"
-                  className="btn btn--outline header__auth-btn"
+                  className={`btn btn--outline header__auth-btn header__auth-btn--chat ${
+                    hasUnread ? 'header__auth-btn--unread' : ''
+                  }`}
                   onClick={() => setMenuOpen(false)}
+                  aria-label={hasUnread ? `Չատ, ${totalUnread} չկարդացված` : 'Չատ'}
                 >
                   Չատ
+                  {hasUnread && (
+                    <span className="header__unread-badge" aria-hidden="true">
+                      {totalUnread > 99 ? '99+' : totalUnread}
+                    </span>
+                  )}
                 </Link>
                 <button
                   type="button"
